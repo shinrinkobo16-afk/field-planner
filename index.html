@@ -229,7 +229,8 @@
 <div class="view-banner" id="viewBanner" hidden>
   <div id="viewBannerText"></div>
   <div class="vb-btns">
-    <button type="button" class="small" id="viewImportBtn">このデータを取り込む</button>
+    <button type="button" class="small" id="viewMergeBtn">合わせる</button>
+    <button type="button" class="small" id="viewImportBtn">置き換える</button>
     <button type="button" class="small" id="viewCloseBtn">閉じる</button>
   </div>
 </div>
@@ -301,24 +302,31 @@
       </select>
     </div>
     <div class="card">
-      <h2>家族に見せる</h2>
-      <div class="muted">今の畑の状態を詰め込んだリンクを作ります。LINEなどで送ると、家族はタップするだけで畑マップとカレンダーを見られます(見るだけで、家族のスマホのデータは変わりません)。畑を変えたら、またリンクを送り直してください。</div>
-      <button type="button" class="primary" style="margin-top:10px" id="viewLinkBtn">見るだけリンクを送る</button>
+      <h2>家族と共有</h2>
+      <div class="muted">今の畑の状態を詰め込んだリンクを作ります。LINEなどで送ると、家族はタップするだけで畑マップとカレンダーを見られます。家族が編集した畑をリンクで送り返してもらえば、「合わせる」で両方の変更をまとめられます。</div>
+      <button type="button" class="primary" style="margin-top:10px" id="viewLinkBtn">共有リンクを送る</button>
       <details class="help">
         <summary>くわしい説明</summary>
         <div class="muted">
-          <b>家族に見せる(見るだけリンク)</b><br>
-          ① 上の「見るだけリンクを送る」を押す<br>
+          <b>家族に見せる</b><br>
+          ① 上の「共有リンクを送る」を押す<br>
           ② 共有画面でLINEなどを選んで家族に送る<br>
           ③ 家族はリンクをタップするだけで、畑マップとカレンダーを見られます。作物をタップすると、日付・メモ・連作の状態も見られます。<br>
-          ・見るだけなので編集はできません。家族のスマホのデータも変わりません。<br>
-          ・画面の上に「👀 見るだけ表示(○/○ ○:○○ 時点の畑)」と出るので、いつの状態か分かります。<br>
+          ・リンクを開いた画面は見るだけです。開いただけでは家族のスマホのデータは変わりません。<br>
+          ・画面の上に「👀 ○/○ ○:○○ 時点の畑」と出るので、いつの状態か分かります。<br>
           ・リンクは送った時点の畑を写したものです。畑を変えたら、リンクを送り直してください。<br><br>
-          <b>データを渡す</b><br>
-          ・見るだけ画面の「このデータを取り込む」を押すと、受け取った人のスマホに畑のデータとして保存されます(その人のそれまでのデータは置き換わります)。<br>
-          ・下の「バックアップを保存」→ 受け取った人が「読み込む」でも渡せます。<br><br>
+          <b>家族も編集するとき</b><br>
+          ① 最初に、家族がリンクを開いて「置き換える」(または「合わせる」)を押し、自分のスマホに畑のデータを入れる<br>
+          ② 家族は自分のスマホで編集し、「設定」→「共有リンクを送る」で送り返す<br>
+          ③ 受け取った人がリンクを開いて「合わせる」を押す<br>
+          ・「合わせる」は、作物・区画ごとに新しく変更された方を残します。家族が追加した作物も、自分が追加した作物も両方残ります。削除も反映されます。<br>
+          ・同じ作物を2人が別々に直していた場合は、後から直した方が残ります。<br>
+          ・「置き換える」は、自分のデータを捨てて、リンクの畑に丸ごと入れ替えます。<br>
+          ・作物リストの直し(時期や年数)は、それぞれのスマホのものが使われます(合わせません)。<br><br>
+          <b>ファイルで渡す</b><br>
+          下の「バックアップを保存」→ 受け取った人が「読み込む」でも渡せます(丸ごと置き換わります)。<br><br>
           <b>LINEで開いたときの注意</b><br>
-          LINEの中の画面で「取り込む」を押すと、データはLINEの中にだけ保存され、いつも使うブラウザ(ChromeやSafari)には入りません。取り込むときは、右上のメニューから「ブラウザで開く」を選んでからにしてください。見るだけなら、LINEの中のままで大丈夫です。<br><br>
+          LINEの中の画面で「合わせる」「置き換える」を押すと、データはLINEの中にだけ保存され、いつも使うブラウザ(ChromeやSafari)には入りません。そのときは、右上のメニューから「ブラウザで開く」を選んでから押してください。見るだけなら、LINEの中のままで大丈夫です。<br><br>
           <b>データの扱い</b><br>
           畑のデータはリンクの中に入っていて、インターネット上のサーバーには送られません。ただし、リンクを転送された人は誰でも見られるので、送る相手に気をつけてください。
         </div>
@@ -437,7 +445,8 @@ const DEFAULT_CROPS = [
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function defaultData() {
   // settings.rotCap: 連作であける年数の上限。0 = 作物ごとの標準どおり、1〜3 = 最大N年、-1 = 連作の警告を出さない
-  return { fields: [], beds: [], plantings: [], cropEdits: {}, customCrops: [], settings: { rotCap: 0 } };
+  // deleted: 削除した畑・区画・作付けのID → 削除日時(ms)。共有リンクの「合わせる」で削除を相手に伝えるため
+  return { fields: [], beds: [], plantings: [], cropEdits: {}, customCrops: [], settings: { rotCap: 0 }, deleted: {} };
 }
 function normalizeData(d) {
   const out = Object.assign(defaultData(), d);
@@ -450,13 +459,46 @@ function loadData() {
     return d ? normalizeData(d) : defaultData();
   } catch (e) { return defaultData(); }
 }
+/* 変更日時の記録: 畑・区画・作付け・settings に u(最後に変更した日時 ms)を付ける。
+   各操作で個別に付けるのではなく、save() のときに前回保存時(baseline)と比べて、変わったものに付ける。
+   消えたものは deleted に削除日時を残す。 */
+function stripU(o) { const { u, ...rest } = o; return JSON.stringify(rest); }
+function snapshotItems(d) {
+  const m = new Map();
+  for (const o of d.fields.concat(d.beds, d.plantings)) m.set(o.id, stripU(o));
+  m.set('settings', stripU(d.settings));
+  return m;
+}
+function stampChanges() {
+  const now = Date.now();
+  const cur = new Map();
+  for (const o of data.fields.concat(data.beds, data.plantings)) {
+    const s = stripU(o);
+    cur.set(o.id, s);
+    if (baseline.get(o.id) !== s) o.u = now;
+  }
+  const ss = stripU(data.settings);
+  cur.set('settings', ss);
+  if (baseline.get('settings') !== ss) data.settings.u = now;
+  for (const id of baseline.keys()) {
+    if (id !== 'settings' && !cur.has(id)) data.deleted[id] = now;
+  }
+  baseline = cur;
+}
+
 let data = loadData();
+let baseline = snapshotItems(data);
 let viewOnly = null;   // 見るだけリンクで開いたとき { at: 共有した日時 }。このときは保存しない
 function save() {
   if (viewOnly) return;
+  stampChanges();
+  writeData();
+}
+function writeData() {   // 変更日時を付けずにそのまま保存(読み込み・合わせた直後用)
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
   catch (e) { toast('保存できませんでした(容量不足の可能性があります)'); }
 }
+function resetBaseline() { baseline = snapshotItems(data); }
 
 const today = new Date();
 let ui = Object.assign({ fieldId: null, year: today.getFullYear(), month: today.getMonth() + 1, zoom: 1, tab: 'map' },
@@ -1247,18 +1289,23 @@ $('restoreInput').onchange = async e => {
     if (!confirm(`バックアップ(畑${d.fields.length}件・作付け${(d.plantings || []).length}件)を読み込みます。\n今のデータは置き換わります。よろしいですか？`)) return;
     delete d._format; delete d.savedAt;
     data = normalizeData(d);
+    resetBaseline();   // バックアップの変更日時をそのまま使う
     ui.fieldId = data.fields[0] ? data.fields[0].id : null;
     selId = null;
-    save(); saveUi(); renderAll();
+    writeData(); saveUi(); renderAll();
     toast('読み込みました');
   } catch (err) {
     toast('このファイルは読み込めませんでした');
   }
 };
 
-/* ---------- 見るだけリンク ----------
+/* ---------- 共有リンク(見る・取り込む・合わせる) ----------
    データを圧縮して URL の # 以降に入れる(# 以降はサーバーに送られない)。
-   形式: #view=<deflate-raw圧縮したJSONのbase64url>  JSON = { v:1, at, cf, s, f:[[名前,横,縦]], b:[[畑番号,名前,x,y,w,h]], p:[[畑番号,名前,科,rot,開始,収穫,終了,x,y,w,h,メモ,警告オフ]] } */
+   形式: #view=<deflate-raw圧縮したJSONのbase64url>
+   v2 = { v:2, at, cf:表示する畑ID, s:settings, f:[[id,名前,横,縦,u]], b:[[id,畑ID,名前,x,y,w,h,u]],
+          p:[[id,畑ID,作物ID,名前,科,rot,開始,収穫,終了,x,y,w,h,メモ,警告オフ,u]], d:[[削除したID,削除日時]] }
+   v1(最初の版。送信済みのリンクのため読み込みだけ対応)= { v:1, at, cf:畑番号, s, f:[[名前,横,縦]], b:[[畑番号,...]], p:[[畑番号,...]] }
+   形式を変えるときは v を上げ、parseViewHash() で古い形式も読めるようにすること。 */
 function bytesToB64url(bytes) {
   let s = '';
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
@@ -1280,16 +1327,16 @@ async function inflate(bytes) {
 }
 
 async function buildViewLink() {
-  const fi = new Map(data.fields.map((f, i) => [f.id, i]));
   const payload = {
-    v: 1,
+    v: 2,
     at: new Date().toISOString(),
-    cf: fi.get((curField() || {}).id) || 0,
+    cf: (curField() || {}).id || null,
     s: data.settings,
-    f: data.fields.map(f => [f.name, f.w, f.h]),
-    b: data.beds.filter(b => fi.has(b.fieldId)).map(b => [fi.get(b.fieldId), b.name, b.x, b.y, b.w, b.h]),
-    p: data.plantings.filter(p => fi.has(p.fieldId)).map(p =>
-      [fi.get(p.fieldId), p.name, p.family, p.rot, p.start, p.harvest, p.end, p.x, p.y, p.w, p.h, p.memo || '', p.ignoreRot ? 1 : 0]),
+    f: data.fields.map(f => [f.id, f.name, f.w, f.h, f.u || 0]),
+    b: data.beds.map(b => [b.id, b.fieldId, b.name, b.x, b.y, b.w, b.h, b.u || 0]),
+    p: data.plantings.map(p => [p.id, p.fieldId, p.cropId || null, p.name, p.family, p.rot, p.start, p.harvest, p.end,
+      p.x, p.y, p.w, p.h, p.memo || '', p.ignoreRot ? 1 : 0, p.u || 0]),
+    d: Object.entries(data.deleted || {}),
   };
   const enc = bytesToB64url(await deflate(JSON.stringify(payload)));
   return `${location.href.split("#")[0]}#view=${enc}`;
@@ -1299,23 +1346,65 @@ async function parseViewHash() {
   const m = location.hash.match(/^#view=([A-Za-z0-9_-]+)$/);
   if (!m) return null;
   const j = JSON.parse(await inflate(b64urlToBytes(m[1])));
-  if (j.v !== 1) throw new Error('version');
   const d = defaultData();
   d.settings = Object.assign(d.settings, j.s || {});
+  if (j.v === 2) {
+    d.fields = j.f.map(([id, name, w, h, u]) => ({ id, name, w, h, u }));
+    d.beds = j.b.map(([id, fieldId, name, x, y, w, h, u]) => ({ id, fieldId, name, x, y, w, h, u }));
+    d.plantings = j.p.map(([id, fieldId, cropId, name, family, rot, start, harvest, end, x, y, w, h, memo, ign, u]) => ({
+      id, fieldId, cropId, name, family, rot, color: familyColor(family),
+      start, harvest, end, x, y, w, h, memo, ignoreRot: !!ign, u,
+    }));
+    d.deleted = Object.fromEntries(j.d || []);
+    return { data: d, at: j.at, cf: j.cf, mergeable: true };
+  }
+  if (j.v !== 1) throw new Error('version');
+  // v1 はIDを持たないので「合わせる」はできない(見る・取り込むだけ)
   d.fields = j.f.map(([name, w, h], i) => ({ id: 'vf' + i, name, w, h }));
   d.beds = j.b.map(([fi, name, x, y, w, h], i) => ({ id: 'vb' + i, fieldId: 'vf' + fi, name, x, y, w, h }));
   d.plantings = j.p.map(([fi, name, family, rot, start, harvest, end, x, y, w, h, memo, ign], i) => ({
     id: 'vp' + i, fieldId: 'vf' + fi, cropId: null, name, family, rot, color: familyColor(family),
     start, harvest, end, x, y, w, h, memo, ignoreRot: !!ign,
   }));
-  return { data: d, at: j.at, cf: 'vf' + (j.cf || 0) };
+  return { data: d, at: j.at, cf: 'vf' + (j.cf || 0), mergeable: false };
+}
+
+/* 合わせる: 畑・区画・作付けごとに、新しく変更された方を残す。削除は削除日時が変更日時より新しければ反映。
+   作物リストの直し(cropEdits / customCrops)は各自のものを使うので合わせない。 */
+function mergeData(own, inc) {
+  const stats = { add: 0, upd: 0, del: 0 };
+  const tomb = Object.assign({}, own.deleted);
+  for (const [id, t] of Object.entries(inc.deleted || {})) tomb[id] = Math.max(tomb[id] || 0, t);
+  for (const key of ['fields', 'beds', 'plantings']) {
+    const map = new Map(own[key].map(o => [o.id, o]));
+    for (const r of inc[key]) {
+      const l = map.get(r.id);
+      if (!l) {
+        if ((tomb[r.id] || 0) >= (r.u || 0)) continue;   // こちらで後から消したもの
+        map.set(r.id, r); stats.add++;
+      } else if ((r.u || 0) > (l.u || 0)) {
+        map.set(r.id, r); stats.upd++;
+      }
+    }
+    for (const [id, o] of map) {
+      if (tomb[id] && tomb[id] >= (o.u || 0)) { map.delete(id); stats.del++; }
+    }
+    own[key] = [...map.values()];
+  }
+  // 畑が消えた区画・作付けは残さない
+  const fieldIds = new Set(own.fields.map(f => f.id));
+  own.beds = own.beds.filter(b => fieldIds.has(b.fieldId));
+  own.plantings = own.plantings.filter(p => fieldIds.has(p.fieldId));
+  if ((inc.settings.u || 0) > (own.settings.u || 0)) own.settings = Object.assign({}, inc.settings);
+  own.deleted = tomb;
+  return stats;
 }
 
 $('viewLinkBtn').onclick = async () => {
   if (!data.plantings.length && !data.beds.length) { toast('まだ畑に何もありません'); return; }
   try {
     const url = await buildViewLink();
-    const text = '畑の作付けです。リンクを開くと畑マップとカレンダーを見られます。';
+    const text = '畑の作付けです。リンクを開くと畑マップとカレンダーを見られます(アプリを使っている人は「合わせる」で自分の畑にまとめられます)。';
     if (navigator.share) {
       try { await navigator.share({ title: '畑の作付け', text, url }); return; }
       catch (e) { if (e.name === 'AbortError') return; }
@@ -1344,9 +1433,23 @@ $('viewImportBtn').onclick = () => {
   d.customCrops = keepSettings.customCrops;
   viewOnly = null;
   data = d;
-  save();
+  resetBaseline();   // 受け取った変更日時をそのまま使う(このあと「合わせる」ができるように)
+  writeData();
   ui.fieldId = d.fields[0] ? d.fields[0].id : null;
   saveUi();
+  history.replaceState(null, '', location.pathname + location.search);
+  location.reload();
+};
+$('viewMergeBtn').onclick = () => {
+  const own = loadData();
+  if (!own.fields.length) { $('viewImportBtn').click(); return; }   // 自分のデータが空なら取り込みと同じ
+  if (!confirm('このデータと、このスマホの畑のデータを合わせます。\n作物・区画ごとに、新しく変更された方を残します(削除も反映されます)。\n合わせますか？')) return;
+  const stats = mergeData(own, data);
+  viewOnly = null;
+  data = own;
+  resetBaseline();
+  writeData();
+  try { sessionStorage.setItem('field_planner_toast', `合わせました(追加${stats.add}・更新${stats.upd}・削除${stats.del})`); } catch (e) {}
   history.replaceState(null, '', location.pathname + location.search);
   location.reload();
 };
@@ -1408,9 +1511,10 @@ function renderAll() {
       const v = await parseViewHash();
       data = v.data;
       viewOnly = { at: v.at };
-      ui.fieldId = v.cf;
+      ui.fieldId = data.fields.some(f => f.id === v.cf) ? v.cf : (data.fields[0] || {}).id;
       const at = new Date(v.at);
-      $('viewBannerText').textContent = `👀 見るだけ表示(${at.getMonth() + 1}/${at.getDate()} ${at.getHours()}:${pad2(at.getMinutes())} 時点の畑)`;
+      $('viewBannerText').textContent = `👀 ${at.getMonth() + 1}/${at.getDate()} ${at.getHours()}:${pad2(at.getMinutes())} 時点の畑(見るだけ)`;
+      $('viewMergeBtn').hidden = !v.mergeable;
       $('viewBanner').hidden = false;
       document.body.classList.add('view-only');
       mode = 'plant';
@@ -1431,6 +1535,10 @@ function renderAll() {
     ui.fieldId = curField().id;
     renderAll();
   }
+  try {   // 「合わせる」の結果(ページを読み直した後に表示)
+    const msg = sessionStorage.getItem('field_planner_toast');
+    if (msg) { sessionStorage.removeItem('field_planner_toast'); toast(msg); }
+  } catch (e) {}
 })();
 </script>
 </body>
