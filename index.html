@@ -67,6 +67,17 @@
   .screen{display:none;}
   .screen.active{display:block;}
 
+  /* 見るだけ表示 */
+  .view-banner{
+    background:#fff4d6;border-bottom:1px solid #e8cf86;color:#6b4e00;
+    padding:8px 12px;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .view-banner > div:first-child{flex:1;min-width:150px;line-height:1.5;}
+  .vb-btns{display:flex;gap:6px;}
+  body.view-only .tabbar button[data-tab=crops],
+  body.view-only .tabbar button[data-tab=settings],
+  body.view-only #modeSeg{display:none;}
+
   /* 時期の切り替え */
   .period{background:var(--card);border-bottom:1px solid var(--border);padding:8px 10px 6px;position:sticky;top:50px;z-index:20;}
   .year-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
@@ -211,6 +222,13 @@
   <h1>畑の作付け</h1>
   <select id="fieldSelect" aria-label="畑を選ぶ"></select>
 </header>
+<div class="view-banner" id="viewBanner" hidden>
+  <div id="viewBannerText"></div>
+  <div class="vb-btns">
+    <button type="button" class="small" id="viewImportBtn">このデータを取り込む</button>
+    <button type="button" class="small" id="viewCloseBtn">閉じる</button>
+  </div>
+</div>
 
 <main>
   <!-- 時期(マップ・カレンダー共通) -->
@@ -277,6 +295,11 @@
         <option value="3">最大3年あける</option>
         <option value="-1">連作の警告を出さない</option>
       </select>
+    </div>
+    <div class="card">
+      <h2>家族に見せる</h2>
+      <div class="muted">今の畑の状態を詰め込んだリンクを作ります。LINEなどで送ると、家族はタップするだけで畑マップとカレンダーを見られます(見るだけで、家族のスマホのデータは変わりません)。畑を変えたら、またリンクを送り直してください。</div>
+      <button type="button" class="primary" style="margin-top:10px" id="viewLinkBtn">見るだけリンクを送る</button>
     </div>
     <div class="card">
       <h2>バックアップ</h2>
@@ -405,7 +428,9 @@ function loadData() {
   } catch (e) { return defaultData(); }
 }
 let data = loadData();
+let viewOnly = null;   // 見るだけリンクで開いたとき { at: 共有した日時 }。このときは保存しない
 function save() {
+  if (viewOnly) return;
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
   catch (e) { toast('保存できませんでした(容量不足の可能性があります)'); }
 }
@@ -415,7 +440,7 @@ let ui = Object.assign({ fieldId: null, year: today.getFullYear(), month: today.
   (() => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch (e) { return {}; } })());
 ui.year = today.getFullYear();   // 開いたときは今年・今月から
 ui.month = today.getMonth() + 1;
-function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify({ fieldId: ui.fieldId, zoom: ui.zoom })); } catch (e) {} }
+function saveUi() { if (viewOnly) return; try { localStorage.setItem(UI_KEY, JSON.stringify({ fieldId: ui.fieldId, zoom: ui.zoom })); } catch (e) {} }
 
 let mode = 'plant';      // 'plant' | 'bed'
 let selId = null;        // 選択中の作付け or 区画のID
@@ -583,12 +608,13 @@ function renderMap() {
   }
 
   const target = mode === 'plant' ? sel : fieldBeds().find(b => b.id === selId);
-  if (target) addHandles(map, target);
+  if (target && !viewOnly) addHandles(map, target);
 
   renderSelPanel();
-  $('fab').hidden = mode !== 'plant' || ui.tab !== 'map';
+  $('fab').hidden = mode !== 'plant' || ui.tab !== 'map' || !!viewOnly;
   $('mapHint').innerHTML = mode === 'bed'
     ? '区画をタップして選び、ドラッグで移動、四隅の丸で大きさを変えます。'
+    : viewOnly ? '作物をタップすると、日付やメモ、連作の状態を見られます。'
     : (fieldPlantings().length ? '作物をタップして選ぶと、ドラッグで移動・四隅の丸で大きさ変更ができます。' : '');
 }
 
@@ -675,6 +701,7 @@ function renderSelPanel() {
     if (!confirm(`「${p.name}」を削除しますか？`)) return;
     data.plantings = data.plantings.filter(x => x.id !== p.id); selId = null; save(); renderMap();
   };
+  if (viewOnly) for (const el of box.querySelectorAll('.btns, #ppIgnore')) el.remove();
 }
 function fmtM(v) { return `${(+v).toFixed(1)}m`; }
 
@@ -713,7 +740,7 @@ $('map').addEventListener('pointerdown', e => {
   const handle = e.target.closest('.handle');
   const item = e.target.closest('[data-id]');
   const pt = mapPoint(e);
-  if (handle && selId) {
+  if (handle && selId && !viewOnly) {
     const kind = mode === 'bed' ? 'bed' : 'pl';
     const obj = objFor(kind, selId);
     drag = { type: 'resize', corner: handle.dataset.handle, obj, kind, orig: { ...obj }, start: pt, pid: e.pointerId, moved: false };
@@ -721,7 +748,7 @@ $('map').addEventListener('pointerdown', e => {
     e.preventDefault();
     return;
   }
-  if (item && item.dataset.id === selId) {
+  if (item && item.dataset.id === selId && !viewOnly) {
     const obj = objFor(item.dataset.kind, selId);
     drag = { type: 'move', obj, kind: item.dataset.kind, orig: { ...obj }, start: pt, pid: e.pointerId, moved: false, el: item };
     item.setPointerCapture(e.pointerId);
@@ -1028,7 +1055,7 @@ function renderCalendar() {
   html += '</div><div class="muted" style="padding:0 14px 20px">行をタップすると、日付やメモを直せます。</div>';
   box.innerHTML = html;
   for (const row of box.querySelectorAll('.cal-row')) {
-    row.onclick = () => openPlantingSheet(data.plantings.find(p => p.id === row.dataset.id));
+    if (!viewOnly) row.onclick = () => openPlantingSheet(data.plantings.find(p => p.id === row.dataset.id));
   }
 }
 
@@ -1206,6 +1233,103 @@ $('restoreInput').onchange = async e => {
   }
 };
 
+/* ---------- 見るだけリンク ----------
+   データを圧縮して URL の # 以降に入れる(# 以降はサーバーに送られない)。
+   形式: #view=<deflate-raw圧縮したJSONのbase64url>  JSON = { v:1, at, cf, s, f:[[名前,横,縦]], b:[[畑番号,名前,x,y,w,h]], p:[[畑番号,名前,科,rot,開始,収穫,終了,x,y,w,h,メモ,警告オフ]] } */
+function bytesToB64url(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlToBytes(str) {
+  const bin = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function deflate(text) {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function inflate(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return await new Response(stream).text();
+}
+
+async function buildViewLink() {
+  const fi = new Map(data.fields.map((f, i) => [f.id, i]));
+  const payload = {
+    v: 1,
+    at: new Date().toISOString(),
+    cf: fi.get((curField() || {}).id) || 0,
+    s: data.settings,
+    f: data.fields.map(f => [f.name, f.w, f.h]),
+    b: data.beds.filter(b => fi.has(b.fieldId)).map(b => [fi.get(b.fieldId), b.name, b.x, b.y, b.w, b.h]),
+    p: data.plantings.filter(p => fi.has(p.fieldId)).map(p =>
+      [fi.get(p.fieldId), p.name, p.family, p.rot, p.start, p.harvest, p.end, p.x, p.y, p.w, p.h, p.memo || '', p.ignoreRot ? 1 : 0]),
+  };
+  const enc = bytesToB64url(await deflate(JSON.stringify(payload)));
+  return `${location.href.split("#")[0]}#view=${enc}`;
+}
+
+async function parseViewHash() {
+  const m = location.hash.match(/^#view=([A-Za-z0-9_-]+)$/);
+  if (!m) return null;
+  const j = JSON.parse(await inflate(b64urlToBytes(m[1])));
+  if (j.v !== 1) throw new Error('version');
+  const d = defaultData();
+  d.settings = Object.assign(d.settings, j.s || {});
+  d.fields = j.f.map(([name, w, h], i) => ({ id: 'vf' + i, name, w, h }));
+  d.beds = j.b.map(([fi, name, x, y, w, h], i) => ({ id: 'vb' + i, fieldId: 'vf' + fi, name, x, y, w, h }));
+  d.plantings = j.p.map(([fi, name, family, rot, start, harvest, end, x, y, w, h, memo, ign], i) => ({
+    id: 'vp' + i, fieldId: 'vf' + fi, cropId: null, name, family, rot, color: familyColor(family),
+    start, harvest, end, x, y, w, h, memo, ignoreRot: !!ign,
+  }));
+  return { data: d, at: j.at, cf: 'vf' + (j.cf || 0) };
+}
+
+$('viewLinkBtn').onclick = async () => {
+  if (!data.plantings.length && !data.beds.length) { toast('まだ畑に何もありません'); return; }
+  try {
+    const url = await buildViewLink();
+    const text = '畑の作付けです。リンクを開くと畑マップとカレンダーを見られます。';
+    if (navigator.share) {
+      try { await navigator.share({ title: '畑の作付け', text, url }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); toast('リンクをコピーしました。LINEなどに貼り付けて送ってください'); }
+    catch (e) { prompt('このリンクをコピーして送ってください', url); }
+  } catch (err) {
+    console.error(err);
+    toast('リンクを作れませんでした。「バックアップを保存」で渡してください');
+  }
+};
+
+function closeView() {
+  history.replaceState(null, '', location.pathname + location.search);
+  location.reload();
+}
+$('viewCloseBtn').onclick = closeView;
+$('viewImportBtn').onclick = () => {
+  const hasOwn = (() => { const d = loadData(); return d.fields.length > 0 || d.plantings.length > 0; })();
+  if (!confirm('このデータを、このスマホの畑のデータとして取り込みます。' +
+    (hasOwn ? '\nこのスマホに今あるデータは置き換わります(残したい場合は、先に「閉じる」→「設定」→「バックアップを保存」をしてください)。' : '') +
+    '\n取り込みますか？')) return;
+  const keepSettings = loadData();
+  const d = data;
+  d.cropEdits = keepSettings.cropEdits;     // 作物リストの直しは自分のものを残す
+  d.customCrops = keepSettings.customCrops;
+  viewOnly = null;
+  data = d;
+  save();
+  ui.fieldId = d.fields[0] ? d.fields[0].id : null;
+  saveUi();
+  history.replaceState(null, '', location.pathname + location.search);
+  location.reload();
+};
+// 開いたまま別のリンクを開いたとき
+window.addEventListener('hashchange', () => location.reload());
+
 /* ---------- シート ---------- */
 let sheetOnOk = null;
 function openSheet(title, bodyHtml, onOk, noCancel) {
@@ -1255,13 +1379,36 @@ function renderAll() {
   if (ui.tab === 'settings') { renderFieldList(); $('rotCapSel').value = String(data.settings.rotCap); }
 }
 
-if (!curField()) {
-  renderAll();
-  openFieldSheet(null, true);
-} else {
-  ui.fieldId = curField().id;
-  renderAll();
-}
+(async () => {
+  if (location.hash.startsWith('#view=')) {
+    try {
+      const v = await parseViewHash();
+      data = v.data;
+      viewOnly = { at: v.at };
+      ui.fieldId = v.cf;
+      const at = new Date(v.at);
+      $('viewBannerText').textContent = `👀 見るだけ表示(${at.getMonth() + 1}/${at.getDate()} ${at.getHours()}:${pad2(at.getMinutes())} 時点の畑)`;
+      $('viewBanner').hidden = false;
+      document.body.classList.add('view-only');
+      mode = 'plant';
+      ui.tab = 'map';
+      renderAll();
+      return;
+    } catch (err) {
+      console.error(err);
+      viewOnly = null;
+      alert('リンクが途中で切れているなどで、畑のデータを読めませんでした。送った人にもう一度送ってもらってください。');
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+  if (!curField()) {
+    renderAll();
+    openFieldSheet(null, true);
+  } else {
+    ui.fieldId = curField().id;
+    renderAll();
+  }
+})();
 </script>
 </body>
 </html>
