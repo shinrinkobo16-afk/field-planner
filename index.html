@@ -67,6 +67,10 @@
   .screen{display:none;}
   .screen.active{display:block;}
 
+  details.help{margin-top:10px;border-top:1px solid #eee9db;padding-top:8px;}
+  details.help summary{cursor:pointer;color:var(--main);font-size:14px;font-weight:bold;padding:4px 0;}
+  details.help .muted{margin-top:6px;}
+
   /* 見るだけ表示 */
   .view-banner{
     background:#fff4d6;border-bottom:1px solid #e8cf86;color:#6b4e00;
@@ -300,6 +304,25 @@
       <h2>家族に見せる</h2>
       <div class="muted">今の畑の状態を詰め込んだリンクを作ります。LINEなどで送ると、家族はタップするだけで畑マップとカレンダーを見られます(見るだけで、家族のスマホのデータは変わりません)。畑を変えたら、またリンクを送り直してください。</div>
       <button type="button" class="primary" style="margin-top:10px" id="viewLinkBtn">見るだけリンクを送る</button>
+      <details class="help">
+        <summary>くわしい説明</summary>
+        <div class="muted">
+          <b>家族に見せる(見るだけリンク)</b><br>
+          ① 上の「見るだけリンクを送る」を押す<br>
+          ② 共有画面でLINEなどを選んで家族に送る<br>
+          ③ 家族はリンクをタップするだけで、畑マップとカレンダーを見られます。作物をタップすると、日付・メモ・連作の状態も見られます。<br>
+          ・見るだけなので編集はできません。家族のスマホのデータも変わりません。<br>
+          ・画面の上に「👀 見るだけ表示(○/○ ○:○○ 時点の畑)」と出るので、いつの状態か分かります。<br>
+          ・リンクは送った時点の畑を写したものです。畑を変えたら、リンクを送り直してください。<br><br>
+          <b>データを渡す</b><br>
+          ・見るだけ画面の「このデータを取り込む」を押すと、受け取った人のスマホに畑のデータとして保存されます(その人のそれまでのデータは置き換わります)。<br>
+          ・下の「バックアップを保存」→ 受け取った人が「読み込む」でも渡せます。<br><br>
+          <b>LINEで開いたときの注意</b><br>
+          LINEの中の画面で「取り込む」を押すと、データはLINEの中にだけ保存され、いつも使うブラウザ(ChromeやSafari)には入りません。取り込むときは、右上のメニューから「ブラウザで開く」を選んでからにしてください。見るだけなら、LINEの中のままで大丈夫です。<br><br>
+          <b>データの扱い</b><br>
+          畑のデータはリンクの中に入っていて、インターネット上のサーバーには送られません。ただし、リンクを転送された人は誰でも見られるので、送る相手に気をつけてください。
+        </div>
+      </details>
     </div>
     <div class="card">
       <h2>バックアップ</h2>
