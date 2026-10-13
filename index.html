@@ -268,6 +268,17 @@
       <button type="button" style="margin-top:8px" id="addFieldBtn">＋ 畑を追加</button>
     </div>
     <div class="card">
+      <h2>連作の警告</h2>
+      <div class="muted">土壌改良材や連作障害を抑える資材を使っている場合は、あける年数を短くできます。作物ごとの標準より長くはなりません。</div>
+      <select class="f" id="rotCapSel" style="margin-top:8px">
+        <option value="0">作物ごとの標準どおり</option>
+        <option value="1">最大1年あける</option>
+        <option value="2">最大2年あける</option>
+        <option value="3">最大3年あける</option>
+        <option value="-1">連作の警告を出さない</option>
+      </select>
+    </div>
+    <div class="card">
       <h2>バックアップ</h2>
       <div class="muted">データはこのスマホのブラウザの中に保存されています。機種変更やブラウザのデータ削除に備えて、ときどき保存してください(Googleドライブなどに送れます)。</div>
       <div class="row" style="margin-top:10px">
@@ -379,12 +390,18 @@ const DEFAULT_CROPS = [
 /* ---------- 保存データ ---------- */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function defaultData() {
-  return { fields: [], beds: [], plantings: [], cropEdits: {}, customCrops: [] };
+  // settings.rotCap: 連作であける年数の上限。0 = 作物ごとの標準どおり、1〜3 = 最大N年、-1 = 連作の警告を出さない
+  return { fields: [], beds: [], plantings: [], cropEdits: {}, customCrops: [], settings: { rotCap: 0 } };
+}
+function normalizeData(d) {
+  const out = Object.assign(defaultData(), d);
+  out.settings = Object.assign(defaultData().settings, d.settings || {});
+  return out;
 }
 function loadData() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    return d ? Object.assign(defaultData(), d) : defaultData();
+    return d ? normalizeData(d) : defaultData();
   } catch (e) { return defaultData(); }
 }
 let data = loadData();
@@ -440,7 +457,18 @@ function cropById(id) { return allCrops().find(cr => cr.id === id); }
 function cropPeriodText(cr) {
   return `${jun(...cr.s)}〜${jun(...cr.e)}(収穫 ${jun(...cr.h)}〜)`;
 }
-function rotText(n) { return n > 0 ? `${n}年あける` : '連作OK'; }
+// 設定の上限を反映した「あける年数」
+function effRot(n) {
+  const cap = data.settings.rotCap;
+  if (cap < 0) return 0;
+  return cap > 0 ? Math.min(n, cap) : n;
+}
+function rotText(n) {
+  const e = effRot(n);
+  if (data.settings.rotCap < 0) return n > 0 ? `連作の警告なし(標準${n}年)` : '連作OK';
+  if (e <= 0) return '連作OK';
+  return e < n ? `${e}年あける(標準${n}年)` : `${e}年あける`;
+}
 
 /* ---------- 畑・区画・作付け ---------- */
 function curField() { return data.fields.find(f => f.id === ui.fieldId) || data.fields[0]; }
@@ -465,12 +493,14 @@ function yearOf(s) { return +s.slice(0, 4); }
 
 // 連作の注意エリア: 同じ科で、この作物より前に植えて、あけるべき年数以内のもの
 function rotationZones(p) {
-  if (!p.rot) return [];
+  const n = effRot(p.rot);
+  if (!n) return [];
   return data.plantings.filter(q => q.id !== p.id && q.fieldId === p.fieldId && q.family === p.family &&
-    q.start < p.start && !timeOverlap(p, q) && yearOf(p.start) - yearOf(q.start) <= p.rot);
+    q.start < p.start && !timeOverlap(p, q) && yearOf(p.start) - yearOf(q.start) <= n);
 }
 function warningsFor(p) {
-  const rot = rotationZones(p).filter(q => areaOverlap(p, q) > 0.05);
+  // 作付けごとに「連作の警告を出さない」にしたものは、連作の警告だけ出さない(重なりの警告は出す)
+  const rot = p.ignoreRot ? [] : rotationZones(p).filter(q => areaOverlap(p, q) > 0.05);
   const clash = data.plantings.filter(q => q.id !== p.id && q.fieldId === p.fieldId && timeOverlap(p, q) && areaOverlap(p, q) > 0.05);
   return { rot, clash };
 }
@@ -621,12 +651,14 @@ function renderSelPanel() {
   const w = warningsFor(p);
   let warnHtml = '';
   if (w.rot.length) {
-    warnHtml += `<div class="warn-box">⚠ 連作になります：${w.rot.map(q => `${yearOf(q.start)}年に${esc(q.name)}`).join('、')}(${esc(p.family)})。${esc(p.family)}は${p.rot}年あけるのが目安です。赤い斜線の外へ動かしてください。</div>`;
+    warnHtml += `<div class="warn-box">⚠ 連作になります：${w.rot.map(q => `${yearOf(q.start)}年に${esc(q.name)}`).join('、')}(${esc(p.family)})。${esc(p.family)}は${effRot(p.rot)}年あけるのが目安です。赤い斜線の外へ動かしてください。
+      <div style="margin-top:6px"><button type="button" class="small" id="ppIgnore">この作物は警告を出さない</button></div></div>`;
   }
   if (w.clash.length) {
     warnHtml += `<div class="warn-box">⚠ 同じ時期・同じ場所に ${w.clash.map(q => esc(q.name)).join('、')} があります。</div>`;
   }
-  if (!warnHtml && p.rot) warnHtml = `<div class="ok-box">✓ 連作の心配はありません(${esc(p.family)}・${p.rot}年あける)</div>`;
+  if (!warnHtml && p.ignoreRot) warnHtml = `<div class="ok-box">この作物は連作の警告を出さない設定です(「日付・メモ」で戻せます)</div>`;
+  else if (!warnHtml && effRot(p.rot)) warnHtml = `<div class="ok-box">✓ 連作の心配はありません(${esc(p.family)}・${rotText(p.rot)})</div>`;
   box.innerHTML = `<div class="ttl"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}
       <span class="badge">${esc(p.family)}</span></div>
     <div class="muted">${periodText(p)}(収穫 ${shortDate(p.harvest)}〜) / ${fmtM(p.w)} × ${fmtM(p.h)}${p.memo ? '<br>' + esc(p.memo) : ''}</div>
@@ -638,6 +670,7 @@ function renderSelPanel() {
     </div>`;
   $('ppEdit').onclick = () => openPlantingSheet(p);
   $('ppFit').onclick = () => fitToBed(p);
+  if ($('ppIgnore')) $('ppIgnore').onclick = () => { p.ignoreRot = true; save(); renderMap(); toast('この作物は連作の警告を出さないようにしました'); };
   $('ppDel').onclick = () => {
     if (!confirm(`「${p.name}」を削除しますか？`)) return;
     data.plantings = data.plantings.filter(x => x.id !== p.id); selId = null; save(); renderMap();
@@ -933,7 +966,10 @@ function openPlantingSheet(p) {
       <div><label class="f">縦(m)</label><input type="number" id="psH" step="0.1" min="0.2" value="${p.h}"></div>
     </div>
     <label class="f">メモ(品種・株数など)</label>
-    <textarea id="psMemo">${esc(p.memo || '')}</textarea>`, () => {
+    <textarea id="psMemo">${esc(p.memo || '')}</textarea>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:15px">
+      <input type="checkbox" id="psIgnore" style="width:22px;height:22px" ${p.ignoreRot ? 'checked' : ''}> この作物は連作の警告を出さない
+    </label>`, () => {
     const s = $('psStart').value, h = $('psHarvest').value, e = $('psEnd').value;
     if (!s || !e) { toast('植える日と片付ける日を入れてください'); return false; }
     if (e < s) { toast('片付ける日が植える日より前になっています'); return false; }
@@ -943,6 +979,7 @@ function openPlantingSheet(p) {
     p.w = Math.min(f.w - p.x, Math.max(0.2, round1(+$('psW').value || p.w)));
     p.h = Math.min(f.h - p.y, Math.max(0.2, round1(+$('psH').value || p.h)));
     p.memo = $('psMemo').value.trim();
+    p.ignoreRot = $('psIgnore').checked;
     save(); renderAll();
     return true;
   });
@@ -1123,6 +1160,11 @@ function openFieldSheet(f, first) {
   };
 }
 $('addFieldBtn').onclick = () => openFieldSheet(null);
+$('rotCapSel').onchange = e => {
+  data.settings.rotCap = +e.target.value;
+  save();
+  toast('連作の警告の設定を変えました');
+};
 
 /* ---------- バックアップ ---------- */
 async function shareOrDownload(blob, filename) {
@@ -1154,7 +1196,7 @@ $('restoreInput').onchange = async e => {
     if (d._format !== BACKUP_FORMAT || !Array.isArray(d.fields)) throw new Error('format');
     if (!confirm(`バックアップ(畑${d.fields.length}件・作付け${(d.plantings || []).length}件)を読み込みます。\n今のデータは置き換わります。よろしいですか？`)) return;
     delete d._format; delete d.savedAt;
-    data = Object.assign(defaultData(), d);
+    data = normalizeData(d);
     ui.fieldId = data.fields[0] ? data.fields[0].id : null;
     selId = null;
     save(); saveUi(); renderAll();
@@ -1210,7 +1252,7 @@ function renderAll() {
   else $('fab').hidden = true;
   if (ui.tab === 'cal') renderCalendar();
   if (ui.tab === 'crops') renderCropList();
-  if (ui.tab === 'settings') renderFieldList();
+  if (ui.tab === 'settings') { renderFieldList(); $('rotCapSel').value = String(data.settings.rotCap); }
 }
 
 if (!curField()) {
