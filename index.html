@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#3d6b35">
+<title>畑の作付け</title>
+<style>
+  :root{
+    --main:#3d6b35;
+    --main-dark:#2a4d24;
+    --accent:#c9722a;
+    --bg:#f3f1e9;
+    --card:#ffffff;
+    --border:#d6d2c2;
+    --text:#2b2a25;
+    --muted:#77736a;
+    --danger:#c0392b;
+    --warn:#e67e22;
+    --soil:#e9dcc3;
+    --bed:#cdb48c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  [hidden]{display:none !important;}
+  html{scrollbar-gutter:stable;}
+  body{
+    margin:0;
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:15px;
+    padding-bottom:70px;
+  }
+  main{max-width:760px;margin:0 auto;}
+  header.appbar{
+    background:var(--main);color:#fff;
+    padding:10px 12px;
+    display:flex;align-items:center;gap:8px;
+    position:sticky;top:0;z-index:30;height:50px;
+  }
+  header.appbar h1{font-size:16px;margin:0;white-space:nowrap;}
+  header.appbar select{
+    margin-left:auto;max-width:55%;
+    background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);
+    border-radius:8px;padding:6px 8px;font-size:15px;font-family:inherit;
+  }
+  header.appbar select option{color:var(--text);}
+  button{
+    font-family:inherit;font-size:15px;border-radius:8px;border:1px solid var(--border);
+    background:#fff;color:var(--text);padding:9px 12px;cursor:pointer;
+  }
+  button.primary{background:var(--main);border-color:var(--main);color:#fff;font-weight:bold;}
+  button.danger{color:var(--danger);border-color:#e3b3ac;}
+  button.small{font-size:13px;padding:6px 10px;}
+  button:disabled{opacity:.45;}
+  input[type=text],input[type=number],input[type=date],select.f,textarea{
+    width:100%;font-family:inherit;font-size:16px;border:1px solid var(--border);
+    border-radius:8px;padding:9px;background:#fff;color:var(--text);
+  }
+  textarea{resize:vertical;min-height:60px;}
+  label.f{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px;}
+  .row{display:flex;gap:8px;align-items:flex-end;}
+  .row > *{flex:1;min-width:0;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin:10px;}
+  .card h2{font-size:15px;margin:0 0 8px;color:var(--main-dark);}
+  .muted{color:var(--muted);font-size:13px;line-height:1.6;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  /* 時期の切り替え */
+  .period{background:var(--card);border-bottom:1px solid var(--border);padding:8px 10px 6px;position:sticky;top:50px;z-index:20;}
+  .year-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .year-nav b{font-size:16px;}
+  .year-nav button{padding:5px 14px;}
+  .months{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+  .months::-webkit-scrollbar{display:none;}
+  .months button{flex:0 0 auto;padding:6px 9px;font-size:13px;border-radius:16px;}
+  .months button.sel{background:var(--main);border-color:var(--main);color:#fff;font-weight:bold;}
+
+  /* 畑マップ */
+  .map-tools{display:flex;gap:6px;align-items:center;padding:8px 10px;flex-wrap:wrap;}
+  .map-tools .sp{flex:1;}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .seg button{border:none;border-radius:0;padding:7px 10px;font-size:13px;}
+  .seg button.sel{background:var(--main-dark);color:#fff;font-weight:bold;}
+  .map-wrap{overflow:auto;padding:0 10px 10px;-webkit-overflow-scrolling:touch;}
+  .map{
+    position:relative;background-color:var(--soil);
+    border:2px solid #9c8a66;border-radius:4px;
+    touch-action:pan-x pan-y;
+    user-select:none;-webkit-user-select:none;
+    margin:0 auto;
+  }
+  .bed{
+    position:absolute;background:var(--bed);border:1px solid #a88f63;border-radius:3px;
+    color:#5d4a2a;font-size:11px;overflow:hidden;
+  }
+  .bed .nm{position:absolute;left:3px;bottom:1px;white-space:nowrap;opacity:.85;}
+  .map.mode-plant .bed{pointer-events:none;}
+  .map.mode-bed .pl{opacity:.25;pointer-events:none;}
+  .map.mode-bed .bed{cursor:pointer;}
+  .map.mode-bed .bed.sel{outline:3px solid var(--accent);z-index:6;}
+  .pl{
+    position:absolute;border-radius:4px;color:#fff;font-size:12px;font-weight:bold;
+    border:1.5px solid rgba(0,0,0,.25);overflow:hidden;padding:2px 3px;line-height:1.25;
+    text-shadow:0 0 3px rgba(0,0,0,.55);cursor:pointer;z-index:3;
+  }
+  .pl .dt{font-weight:normal;font-size:10px;opacity:.95;}
+  .pl.sel{outline:3px solid #222;outline-offset:1px;z-index:8;touch-action:none;}
+  .pl.warn{border:2.5px dashed #fff;box-shadow:0 0 0 2px var(--danger);}
+  .pl .wi{position:absolute;right:2px;top:1px;font-size:13px;}
+  .zone{
+    position:absolute;z-index:5;pointer-events:none;
+    background:repeating-linear-gradient(45deg,rgba(192,57,43,.38) 0 6px,rgba(192,57,43,.1) 6px 12px);
+    border:2px solid var(--danger);border-radius:3px;
+    color:var(--danger);font-size:10px;font-weight:bold;padding:1px 3px;overflow:hidden;
+    display:flex;align-items:flex-end;
+  }
+  .zone span{background:rgba(255,255,255,.85);border-radius:3px;padding:0 2px;}
+  .handle{
+    position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;z-index:10;
+    touch-action:none;display:flex;align-items:center;justify-content:center;
+  }
+  .handle::after{
+    content:"";width:16px;height:16px;border-radius:50%;
+    background:#fff;border:3px solid #222;box-shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+  .size-tip{
+    position:absolute;z-index:12;background:rgba(0,0,0,.75);color:#fff;font-size:12px;
+    padding:3px 7px;border-radius:5px;pointer-events:none;white-space:nowrap;transform:translate(-50%,-130%);
+  }
+  .empty-map{padding:30px 16px;text-align:center;color:var(--muted);}
+
+  /* 選択中の作付けパネル */
+  .sel-panel{margin:0 10px 10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+  .sel-panel .ttl{display:flex;align-items:center;gap:8px;font-weight:bold;font-size:16px;}
+  .dot{display:inline-block;width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+  .sel-panel .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .warn-box{background:#fdecea;border:1px solid #f1b0a8;color:#8e2b20;border-radius:8px;padding:7px 9px;font-size:13px;margin-top:8px;line-height:1.55;}
+  .ok-box{background:#eaf4e6;border:1px solid #bcd9b2;color:#2a4d24;border-radius:8px;padding:6px 9px;font-size:13px;margin-top:8px;}
+  .fab{
+    position:fixed;right:14px;bottom:80px;z-index:40;
+    background:var(--accent);border-color:var(--accent);color:#fff;font-weight:bold;
+    border-radius:28px;padding:13px 18px;font-size:15px;box-shadow:0 3px 10px rgba(0,0,0,.25);
+  }
+
+  /* カレンダー */
+  .cal{margin:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .cal-head,.cal-row{display:grid;grid-template-columns:92px 1fr;align-items:center;}
+  .cal-head{background:#efeadb;font-size:11px;color:var(--muted);position:sticky;top:0;}
+  .cal-months{display:grid;grid-template-columns:repeat(12,1fr);}
+  .cal-months div{text-align:center;padding:4px 0;border-left:1px solid #e2dccb;}
+  .cal-row{border-top:1px solid #eee9db;min-height:40px;cursor:pointer;}
+  .cal-row:active{background:#f6f3ea;}
+  .cal-name{padding:4px 6px;font-size:12px;line-height:1.3;overflow:hidden;}
+  .cal-name b{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cal-name small{color:var(--muted);}
+  .cal-track{position:relative;height:40px;
+    background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/12 - 1px),#eee9db calc(100%/12 - 1px),#eee9db calc(100%/12));}
+  .cal-bar{position:absolute;top:11px;height:18px;border-radius:4px;overflow:hidden;display:flex;}
+  .cal-bar .g{height:100%;opacity:.45;}
+  .cal-bar .h{height:100%;}
+  .cal-bar.cut-l{border-top-left-radius:0;border-bottom-left-radius:0;}
+  .cal-bar.cut-r{border-top-right-radius:0;border-bottom-right-radius:0;}
+  .cal-today{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);opacity:.6;z-index:2;}
+  .cal-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);padding:0 12px 4px;flex-wrap:wrap;}
+  .cal-legend i{display:inline-block;width:22px;height:10px;border-radius:2px;background:#888;vertical-align:-1px;margin-right:4px;}
+  .cal-legend i.g{opacity:.45;}
+
+  /* 作物リスト */
+  .crop-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid #eee9db;cursor:pointer;}
+  .crop-row:first-child{border-top:none;}
+  .crop-row .info{flex:1;min-width:0;}
+  .crop-row .nm{font-weight:bold;}
+  .crop-row .sub{font-size:12px;color:var(--muted);line-height:1.5;}
+  .badge{font-size:11px;border-radius:10px;padding:1px 7px;background:#efeadb;color:#6b5a3a;white-space:nowrap;}
+  .badge.ok{background:#e3f0dc;color:#2a4d24;}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chips button{flex:0 0 auto;border-radius:16px;padding:5px 11px;font-size:13px;}
+  .chips button.sel{background:var(--main);border-color:var(--main);color:#fff;}
+
+  /* 下部タブ */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--border);z-index:45;}
+  .tabbar button{flex:1;border:none;border-radius:0;background:transparent;padding:9px 2px 13px;font-size:12px;color:var(--muted);}
+  .tabbar button .ic{display:block;font-size:19px;line-height:1.2;}
+  .tabbar button.active{color:var(--main);font-weight:bold;}
+
+  /* シート(下から出る画面) */
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--bg);
+    border-radius:14px 14px 0 0;max-height:88vh;display:flex;flex-direction:column;
+    max-width:760px;margin:0 auto;
+  }
+  .sheet-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);}
+  .sheet-head b{flex:1;font-size:16px;}
+  .sheet-body{overflow-y:auto;padding:4px 14px 20px;}
+  .sheet-foot{display:flex;gap:8px;padding:10px 14px 16px;border-top:1px solid var(--border);background:var(--card);}
+  .sheet-foot button{flex:1;}
+  .toast{
+    position:fixed;left:50%;top:120px;transform:translateX(-50%);z-index:80;
+    background:rgba(42,77,36,.95);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;
+    opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <h1>畑の作付け</h1>
+  <select id="fieldSelect" aria-label="畑を選ぶ"></select>
+</header>
+
+<main>
+  <!-- 時期(マップ・カレンダー共通) -->
+  <div class="period" id="periodBar">
+    <div class="year-nav">
+      <button type="button" id="yearPrev">◀</button>
+      <b id="yearLabel"></b>
+      <button type="button" id="yearNext">▶</button>
+    </div>
+    <div class="months" id="monthChips"></div>
+  </div>
+
+  <!-- 畑マップ -->
+  <section class="screen active" id="scr-map">
+    <div class="map-tools">
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="plant" class="sel">作物</button>
+        <button type="button" data-mode="bed">区画を編集</button>
+      </div>
+      <span class="sp"></span>
+      <button type="button" class="small" id="zoomOut">－</button>
+      <button type="button" class="small" id="zoomIn">＋</button>
+    </div>
+    <div class="map-wrap" id="mapWrap">
+      <div class="map mode-plant" id="map"></div>
+    </div>
+    <div id="selPanel"></div>
+    <div class="muted" style="padding:0 14px 90px" id="mapHint"></div>
+    <button type="button" class="fab" id="fab">＋ 作物を植える</button>
+  </section>
+
+  <!-- カレンダー -->
+  <section class="screen" id="scr-cal">
+    <div class="cal-legend" style="padding-top:10px">
+      <span><i class="g"></i>育てる期間</span><span><i></i>収穫の期間</span><span style="color:var(--danger)">｜ 今日</span>
+    </div>
+    <div id="calBody"></div>
+  </section>
+
+  <!-- 作物リスト -->
+  <section class="screen" id="scr-crops">
+    <div class="card">
+      <h2>作物リスト(時期の目安：中間地)</h2>
+      <div class="muted">作物をタップすると、時期や「何年あけるか」を自分の畑に合わせて直せます。直した内容は、これから植える分に使われます(植えた後の作物は、マップで作物を選んで日付を直します)。</div>
+      <div style="margin-top:10px"><button type="button" class="primary" id="addCropBtn">＋ 作物を追加</button></div>
+    </div>
+    <div class="card" style="padding:0" id="cropList"></div>
+  </section>
+
+  <!-- 設定 -->
+  <section class="screen" id="scr-settings">
+    <div class="card">
+      <h2>畑</h2>
+      <div id="fieldList"></div>
+      <button type="button" style="margin-top:8px" id="addFieldBtn">＋ 畑を追加</button>
+    </div>
+    <div class="card">
+      <h2>バックアップ</h2>
+      <div class="muted">データはこのスマホのブラウザの中に保存されています。機種変更やブラウザのデータ削除に備えて、ときどき保存してください(Googleドライブなどに送れます)。</div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="backupBtn">バックアップを保存</button>
+        <button type="button" id="restoreBtn">読み込む</button>
+      </div>
+      <input type="file" id="restoreInput" accept=".txt,.json,text/plain,application/json" hidden>
+    </div>
+    <div class="card">
+      <h2>使い方</h2>
+      <div class="muted">
+        ① 「区画を編集」で畝などの区画を作ります(なくても使えます)。<br>
+        ② 「＋ 作物を植える」で作物を選ぶと、空いている区画に置かれます。連作にならない区画を優先します。<br>
+        ③ 作物をタップすると選択され、ドラッグで移動、四隅の丸で大きさを変えられます。<br>
+        ④ 選んだ作物と同じ科を最近育てた場所は<b style="color:var(--danger)">赤い斜線</b>で表示されます。重なると⚠が付きます。<br>
+        ⑤ 上の月を切り替えると、その月に畑にある作物だけを表示します。「通年」は1年分すべてです。<br>
+        時期や連作の年数は一般的な目安です。品種や地域に合わせて「作物」タブで直してください。
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button type="button" class="active" data-tab="map"><span class="ic">🗺️</span>畑マップ</button>
+  <button type="button" data-tab="cal"><span class="ic">📅</span>カレンダー</button>
+  <button type="button" data-tab="crops"><span class="ic">🌱</span>作物</button>
+  <button type="button" data-tab="settings"><span class="ic">⚙️</span>設定</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'field_planner_v1';
+const UI_KEY = 'field_planner_ui_v1';
+const BACKUP_FORMAT = 'field-planner-v1';
+
+/* ---------- 作物の初期データ(中間地の目安) ----------
+   時期は [月, 旬(1=上旬 2=中旬 3=下旬)]。13以上は翌年の月(17 = 翌年5月)。
+   s = 種まき・植え付け、h = 収穫開始、e = 収穫終わり(片付け)。rot = 同じ科を何年あけるか(0 = 連作OK)。
+   IDは固定。変更すると保存データの作物と結びつかなくなるので変えないこと。 */
+const FAMILY_COLORS = {
+  'ナス科': '#d64541',
+  'ウリ科': '#e8962e',
+  'マメ科': '#7cb342',
+  'アブラナ科': '#2e8b57',
+  'キク科': '#8e5cc9',
+  'セリ科': '#d4a017',
+  'ネギ類(ヒガンバナ科)': '#4a86c5',
+  'ヒユ科': '#1f9e94',
+  'イネ科': '#b38b4d',
+  'ヒルガオ科': '#b5517a',
+  'サトイモ科': '#6d8a4e',
+  'アオイ科': '#e06c9f',
+  'シソ科': '#5c6bc0',
+  'バラ科': '#e0306a',
+  'ショウガ科': '#8d6e63',
+  'その他': '#78909c',
+};
+function c(id, name, family, how, rot, s, h, e) { return { id, name, family, how, rot, s, h, e }; }
+const DEFAULT_CROPS = [
+  c('tomato', 'トマト', 'ナス科', '苗', 3, [5, 1], [7, 1], [9, 3]),
+  c('minitomato', 'ミニトマト', 'ナス科', '苗', 3, [5, 1], [6, 3], [10, 1]),
+  c('eggplant', 'ナス', 'ナス科', '苗', 4, [5, 1], [6, 2], [10, 2]),
+  c('pepper', 'ピーマン', 'ナス科', '苗', 3, [5, 1], [6, 2], [10, 2]),
+  c('shishito', 'シシトウ', 'ナス科', '苗', 3, [5, 1], [6, 2], [10, 2]),
+  c('potato-spring', 'ジャガイモ(春)', 'ナス科', '種いも', 3, [3, 1], [6, 1], [6, 3]),
+  c('potato-autumn', 'ジャガイモ(秋)', 'ナス科', '種いも', 3, [8, 3], [11, 2], [12, 1]),
+  c('cucumber', 'キュウリ', 'ウリ科', '苗', 2, [5, 1], [6, 1], [8, 1]),
+  c('watermelon', 'スイカ', 'ウリ科', '苗', 5, [5, 1], [7, 2], [8, 2]),
+  c('pumpkin', 'カボチャ', 'ウリ科', '苗', 1, [5, 1], [7, 2], [8, 2]),
+  c('goya', 'ゴーヤ', 'ウリ科', '苗', 2, [5, 1], [7, 1], [9, 3]),
+  c('zucchini', 'ズッキーニ', 'ウリ科', '苗', 1, [5, 1], [6, 1], [7, 3]),
+  c('melon', 'メロン', 'ウリ科', '苗', 3, [5, 1], [7, 2], [8, 1]),
+  c('edamame', 'エダマメ', 'マメ科', '種', 2, [4, 3], [7, 1], [8, 1]),
+  c('ingen', 'インゲン(つるなし)', 'マメ科', '種', 2, [4, 3], [6, 3], [7, 3]),
+  c('soramame', 'ソラマメ', 'マメ科', '種', 4, [10, 3], [17, 1], [17, 3]),
+  c('endou', 'エンドウ(スナップ)', 'マメ科', '種', 4, [10, 3], [16, 3], [17, 3]),
+  c('peanut', 'ラッカセイ', 'マメ科', '種', 2, [5, 1], [9, 3], [10, 2]),
+  c('cabbage-spring', 'キャベツ(春植え)', 'アブラナ科', '苗', 2, [4, 1], [6, 1], [7, 1]),
+  c('cabbage-autumn', 'キャベツ(夏植え)', 'アブラナ科', '苗', 2, [8, 3], [11, 1], [13, 2]),
+  c('hakusai', 'ハクサイ', 'アブラナ科', '苗', 2, [9, 1], [11, 1], [12, 3]),
+  c('broccoli', 'ブロッコリー', 'アブラナ科', '苗', 2, [8, 3], [11, 1], [12, 3]),
+  c('daikon-autumn', 'ダイコン(秋まき)', 'アブラナ科', '種', 1, [9, 1], [11, 1], [12, 3]),
+  c('daikon-spring', 'ダイコン(春まき)', 'アブラナ科', '種', 1, [3, 3], [5, 3], [6, 2]),
+  c('kabu', 'カブ(秋まき)', 'アブラナ科', '種', 1, [9, 1], [10, 3], [12, 1]),
+  c('komatsuna-spring', 'コマツナ(春)', 'アブラナ科', '種', 1, [3, 3], [4, 3], [5, 3]),
+  c('komatsuna-autumn', 'コマツナ(秋)', 'アブラナ科', '種', 1, [9, 1], [10, 1], [11, 3]),
+  c('mizuna', 'ミズナ', 'アブラナ科', '種', 1, [9, 1], [10, 2], [12, 2]),
+  c('chingensai', 'チンゲンサイ', 'アブラナ科', '種', 1, [9, 1], [10, 1], [11, 2]),
+  c('lettuce', 'レタス(秋)', 'キク科', '苗', 1, [9, 1], [10, 2], [11, 3]),
+  c('shungiku', 'シュンギク', 'キク科', '種', 1, [9, 1], [10, 2], [12, 1]),
+  c('gobou', 'ゴボウ', 'キク科', '種', 4, [4, 1], [10, 1], [12, 1]),
+  c('carrot-summer', 'ニンジン(夏まき)', 'セリ科', '種', 1, [7, 2], [10, 2], [12, 3]),
+  c('carrot-spring', 'ニンジン(春まき)', 'セリ科', '種', 1, [3, 2], [6, 3], [7, 2]),
+  c('onion', 'タマネギ', 'ネギ類(ヒガンバナ科)', '苗', 0, [11, 2], [17, 2], [18, 1]),
+  c('negi', 'ネギ(根深)', 'ネギ類(ヒガンバナ科)', '苗', 1, [6, 1], [10, 1], [15, 1]),
+  c('garlic', 'ニンニク', 'ネギ類(ヒガンバナ科)', '球', 1, [10, 1], [17, 2], [18, 1]),
+  c('spinach-autumn', 'ホウレンソウ(秋)', 'ヒユ科', '種', 1, [9, 2], [10, 3], [12, 2]),
+  c('spinach-spring', 'ホウレンソウ(春)', 'ヒユ科', '種', 1, [3, 1], [4, 2], [5, 1]),
+  c('corn', 'トウモロコシ', 'イネ科', '種', 0, [4, 2], [7, 2], [8, 1]),
+  c('sweetpotato', 'サツマイモ', 'ヒルガオ科', '苗', 0, [5, 2], [9, 2], [11, 1]),
+  c('satoimo', 'サトイモ', 'サトイモ科', '種いも', 3, [4, 2], [10, 1], [11, 2]),
+  c('okra', 'オクラ', 'アオイ科', '種', 2, [5, 2], [7, 1], [10, 1]),
+  c('shiso', 'シソ', 'シソ科', '苗', 1, [5, 1], [6, 2], [10, 1]),
+  c('strawberry', 'イチゴ', 'バラ科', '苗', 2, [10, 2], [16, 3], [18, 1]),
+  c('ginger', 'ショウガ', 'ショウガ科', '種いも', 4, [4, 3], [8, 3], [11, 1]),
+];
+
+/* ---------- 保存データ ---------- */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function defaultData() {
+  return { fields: [], beds: [], plantings: [], cropEdits: {}, customCrops: [] };
+}
+function loadData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    return d ? Object.assign(defaultData(), d) : defaultData();
+  } catch (e) { return defaultData(); }
+}
+let data = loadData();
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  catch (e) { toast('保存できませんでした(容量不足の可能性があります)'); }
+}
+
+const today = new Date();
+let ui = Object.assign({ fieldId: null, year: today.getFullYear(), month: today.getMonth() + 1, zoom: 1, tab: 'map' },
+  (() => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch (e) { return {}; } })());
+ui.year = today.getFullYear();   // 開いたときは今年・今月から
+ui.month = today.getMonth() + 1;
+function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify({ fieldId: ui.fieldId, zoom: ui.zoom })); } catch (e) {} }
+
+let mode = 'plant';      // 'plant' | 'bed'
+let selId = null;        // 選択中の作付け or 区画のID
+
+/* ---------- 共通 ---------- */
+const $ = id => document.getElementById(id);
+function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function familyColor(f) { return FAMILY_COLORS[f] || FAMILY_COLORS['その他']; }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function ymd(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function parseYmd(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function jun(m, j) {   // 表示用「5月上旬」「翌5月中旬」
+  const next = m > 12;
+  return `${next ? '翌' : ''}${next ? m - 12 : m}月${['上', '中', '下'][j - 1]}旬`;
+}
+function junToDate(year, [m, j], isEnd) {
+  if (isEnd) return j === 3 ? new Date(year, m, 0) : new Date(year, m - 1, j * 10);
+  return new Date(year, m - 1, (j - 1) * 10 + 1);
+}
+function shortDate(s) { const d = parseYmd(s); return `${d.getMonth() + 1}/${d.getDate()}`; }
+function periodText(p) {
+  const s = parseYmd(p.start), e = parseYmd(p.end);
+  const ey = e.getFullYear() !== s.getFullYear() ? `${e.getFullYear()}/` : '';
+  return `${s.getMonth() + 1}/${s.getDate()}〜${ey}${e.getMonth() + 1}/${e.getDate()}`;
+}
+
+/* ---------- 作物 ---------- */
+function allCrops() {
+  const base = DEFAULT_CROPS.map(cr => Object.assign({}, cr, data.cropEdits[cr.id] || {}, { builtin: true }));
+  return base.concat(data.customCrops.map(cr => Object.assign({}, cr, { builtin: false })));
+}
+function cropById(id) { return allCrops().find(cr => cr.id === id); }
+function cropPeriodText(cr) {
+  return `${jun(...cr.s)}〜${jun(...cr.e)}(収穫 ${jun(...cr.h)}〜)`;
+}
+function rotText(n) { return n > 0 ? `${n}年あける` : '連作OK'; }
+
+/* ---------- 畑・区画・作付け ---------- */
+function curField() { return data.fields.find(f => f.id === ui.fieldId) || data.fields[0]; }
+function fieldBeds() { const f = curField(); return f ? data.beds.filter(b => b.fieldId === f.id) : []; }
+function fieldPlantings() { const f = curField(); return f ? data.plantings.filter(p => p.fieldId === f.id) : []; }
+
+function viewRange() {
+  if (ui.month) {
+    const s = new Date(ui.year, ui.month - 1, 1), e = new Date(ui.year, ui.month, 0);
+    return [ymd(s), ymd(e)];
+  }
+  return [`${ui.year}-01-01`, `${ui.year}-12-31`];
+}
+function inView(p) { const [s, e] = viewRange(); return p.start <= e && p.end >= s; }
+function timeOverlap(a, b) { return a.start <= b.end && a.end >= b.start; }
+function areaOverlap(a, b) {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+function yearOf(s) { return +s.slice(0, 4); }
+
+// 連作の注意エリア: 同じ科で、この作物より前に植えて、あけるべき年数以内のもの
+function rotationZones(p) {
+  if (!p.rot) return [];
+  return data.plantings.filter(q => q.id !== p.id && q.fieldId === p.fieldId && q.family === p.family &&
+    q.start < p.start && !timeOverlap(p, q) && yearOf(p.start) - yearOf(q.start) <= p.rot);
+}
+function warningsFor(p) {
+  const rot = rotationZones(p).filter(q => areaOverlap(p, q) > 0.05);
+  const clash = data.plantings.filter(q => q.id !== p.id && q.fieldId === p.fieldId && timeOverlap(p, q) && areaOverlap(p, q) > 0.05);
+  return { rot, clash };
+}
+function hasWarning(p) { const w = warningsFor(p); return w.rot.length > 0 || w.clash.length > 0; }
+
+/* ---------- 時期バー ---------- */
+function renderPeriod() {
+  $('yearLabel').textContent = `${ui.year}年`;
+  const box = $('monthChips');
+  box.innerHTML = '';
+  const items = [[0, '通年']].concat(Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1}月`]));
+  for (const [m, label] of items) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    if (ui.month === m) b.className = 'sel';
+    b.onclick = () => { ui.month = m; renderAll(); };
+    box.appendChild(b);
+  }
+  const sel = box.querySelector('.sel');
+  if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'center' });
+  $('monthChips').hidden = ui.tab === 'cal';
+}
+$('yearPrev').onclick = () => { ui.year--; renderAll(); };
+$('yearNext').onclick = () => { ui.year++; renderAll(); };
+
+/* ---------- 畑マップ ---------- */
+let scale = 40;   // 1mあたりのpx
+
+function computeScale() {
+  const f = curField();
+  const wrapW = $('mapWrap').clientWidth - 24;   // 左右の余白10px×2 + 枠線2px×2
+  scale = (wrapW / f.w) * ui.zoom;
+}
+
+function renderMap() {
+  const map = $('map');
+  const f = curField();
+  map.innerHTML = '';
+  if (!f) { map.style.width = map.style.height = '0'; return; }
+  computeScale();
+  map.className = 'map mode-' + mode;
+  map.style.width = f.w * scale + 'px';
+  map.style.height = f.h * scale + 'px';
+  map.style.backgroundImage =
+    'linear-gradient(rgba(120,95,60,.13) 1px, transparent 1px), linear-gradient(90deg, rgba(120,95,60,.13) 1px, transparent 1px)';
+  map.style.backgroundSize = `${scale}px ${scale}px`;
+
+  for (const b of fieldBeds()) {
+    const el = document.createElement('div');
+    el.className = 'bed' + (mode === 'bed' && b.id === selId ? ' sel' : '');
+    el.dataset.id = b.id; el.dataset.kind = 'bed';
+    place(el, b);
+    el.innerHTML = `<span class="nm">${esc(b.name)}</span>`;
+    map.appendChild(el);
+  }
+
+  const sel = mode === 'plant' ? data.plantings.find(p => p.id === selId) : null;
+  if (sel) {
+    for (const q of rotationZones(sel)) {
+      const z = document.createElement('div');
+      z.className = 'zone';
+      place(z, q);
+      z.innerHTML = `<span>${yearOf(q.start)} ${esc(q.name)}</span>`;
+      map.appendChild(z);
+    }
+  }
+
+  const visible = fieldPlantings().filter(p => inView(p) || p.id === selId);
+  visible.sort((a, b) => a.start.localeCompare(b.start));
+  for (const p of visible) {
+    const el = document.createElement('div');
+    const warn = hasWarning(p);
+    el.className = 'pl' + (p.id === selId && mode === 'plant' ? ' sel' : '') + (warn ? ' warn' : '');
+    el.dataset.id = p.id; el.dataset.kind = 'pl';
+    el.style.background = p.color;
+    place(el, p);
+    el.innerHTML = `${esc(p.name)}<div class="dt">${periodText(p)}</div>${warn ? '<span class="wi">⚠</span>' : ''}`;
+    map.appendChild(el);
+  }
+
+  const target = mode === 'plant' ? sel : fieldBeds().find(b => b.id === selId);
+  if (target) addHandles(map, target);
+
+  renderSelPanel();
+  $('fab').hidden = mode !== 'plant' || ui.tab !== 'map';
+  $('mapHint').innerHTML = mode === 'bed'
+    ? '区画をタップして選び、ドラッグで移動、四隅の丸で大きさを変えます。'
+    : (fieldPlantings().length ? '作物をタップして選ぶと、ドラッグで移動・四隅の丸で大きさ変更ができます。' : '');
+}
+
+function place(el, r) {
+  el.style.left = r.x * scale + 'px';
+  el.style.top = r.y * scale + 'px';
+  el.style.width = Math.max(4, r.w * scale) + 'px';
+  el.style.height = Math.max(4, r.h * scale) + 'px';
+}
+
+function addHandles(map, r) {
+  for (const corner of ['nw', 'ne', 'sw', 'se']) {
+    const h = document.createElement('div');
+    h.className = 'handle';
+    h.dataset.handle = corner;
+    map.appendChild(h);
+  }
+  positionHandles(r);
+}
+function positionHandles(r) {
+  for (const h of $('map').querySelectorAll('.handle')) {
+    const c = h.dataset.handle;
+    h.style.left = (c.includes('w') ? r.x : r.x + r.w) * scale + 'px';
+    h.style.top = (c.includes('n') ? r.y : r.y + r.h) * scale + 'px';
+  }
+}
+
+function renderSelPanel() {
+  const box = $('selPanel');
+  box.innerHTML = '';
+  if (mode === 'bed') {
+    const b = fieldBeds().find(x => x.id === selId);
+    box.className = 'sel-panel';
+    if (!b) {
+      box.innerHTML = `<div class="muted">畝などの区画を作っておくと、作物を植えるときに自動でその区画に置かれます。</div>
+        <div class="btns"><button type="button" class="primary" id="bpAdd">＋ 区画を追加</button></div>`;
+      $('bpAdd').onclick = addBed;
+      return;
+    }
+    box.innerHTML = `<div class="ttl"><span class="dot" style="background:var(--bed)"></span>${esc(b.name)}</div>
+      <div class="muted">${fmtM(b.w)} × ${fmtM(b.h)}</div>
+      <div class="btns">
+        <button type="button" id="bpRename">名前・大きさ</button>
+        <button type="button" id="bpCopy">右(下)に複製</button>
+        <button type="button" class="danger" id="bpDel">削除</button>
+        <button type="button" class="primary" id="bpAdd">＋ 区画を追加</button>
+      </div>`;
+    $('bpRename').onclick = () => openBedSheet(b);
+    $('bpCopy').onclick = () => copyBed(b);
+    $('bpDel').onclick = () => {
+      if (!confirm(`区画「${b.name}」を削除しますか？(植えた作物は消えません)`)) return;
+      data.beds = data.beds.filter(x => x.id !== b.id); selId = null; save(); renderMap();
+    };
+    $('bpAdd').onclick = addBed;
+    return;
+  }
+  const p = data.plantings.find(x => x.id === selId);
+  if (!p) { box.className = ''; return; }
+  box.className = 'sel-panel';
+  const w = warningsFor(p);
+  let warnHtml = '';
+  if (w.rot.length) {
+    warnHtml += `<div class="warn-box">⚠ 連作になります：${w.rot.map(q => `${yearOf(q.start)}年に${esc(q.name)}`).join('、')}(${esc(p.family)})。${esc(p.family)}は${p.rot}年あけるのが目安です。赤い斜線の外へ動かしてください。</div>`;
+  }
+  if (w.clash.length) {
+    warnHtml += `<div class="warn-box">⚠ 同じ時期・同じ場所に ${w.clash.map(q => esc(q.name)).join('、')} があります。</div>`;
+  }
+  if (!warnHtml && p.rot) warnHtml = `<div class="ok-box">✓ 連作の心配はありません(${esc(p.family)}・${p.rot}年あける)</div>`;
+  box.innerHTML = `<div class="ttl"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}
+      <span class="badge">${esc(p.family)}</span></div>
+    <div class="muted">${periodText(p)}(収穫 ${shortDate(p.harvest)}〜) / ${fmtM(p.w)} × ${fmtM(p.h)}${p.memo ? '<br>' + esc(p.memo) : ''}</div>
+    ${warnHtml}
+    <div class="btns">
+      <button type="button" class="primary" id="ppEdit">日付・メモ</button>
+      <button type="button" id="ppFit">区画に合わせる</button>
+      <button type="button" class="danger" id="ppDel">削除</button>
+    </div>`;
+  $('ppEdit').onclick = () => openPlantingSheet(p);
+  $('ppFit').onclick = () => fitToBed(p);
+  $('ppDel').onclick = () => {
+    if (!confirm(`「${p.name}」を削除しますか？`)) return;
+    data.plantings = data.plantings.filter(x => x.id !== p.id); selId = null; save(); renderMap();
+  };
+}
+function fmtM(v) { return `${(+v).toFixed(1)}m`; }
+
+/* ---------- ドラッグ操作 ---------- */
+const SNAP_PX = 10;
+let drag = null;
+
+function objFor(kind, id) {
+  return kind === 'bed' ? data.beds.find(b => b.id === id) : data.plantings.find(p => p.id === id);
+}
+function mapPoint(e) {
+  const r = $('map').getBoundingClientRect();
+  return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale };
+}
+// 吸着させる線(畑の端・区画の端・表示中の作物の端)
+function snapLines(exceptId) {
+  const f = curField();
+  const xs = [0, f.w], ys = [0, f.h];
+  const others = fieldBeds().concat(fieldPlantings().filter(inView));
+  for (const o of others) {
+    if (o.id === exceptId) continue;
+    xs.push(o.x, o.x + o.w); ys.push(o.y, o.y + o.h);
+  }
+  return { xs, ys };
+}
+function snapVal(v, lines) {
+  let best = null, bd = SNAP_PX / scale;
+  for (const l of lines) { const d = Math.abs(v - l); if (d < bd) { bd = d; best = l; } }
+  return best;
+}
+function round1(v) { return Math.round(v * 10) / 10; }
+
+$('map').addEventListener('pointerdown', e => {
+  const f = curField();
+  if (!f) return;
+  const handle = e.target.closest('.handle');
+  const item = e.target.closest('[data-id]');
+  const pt = mapPoint(e);
+  if (handle && selId) {
+    const kind = mode === 'bed' ? 'bed' : 'pl';
+    const obj = objFor(kind, selId);
+    drag = { type: 'resize', corner: handle.dataset.handle, obj, kind, orig: { ...obj }, start: pt, pid: e.pointerId, moved: false };
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    return;
+  }
+  if (item && item.dataset.id === selId) {
+    const obj = objFor(item.dataset.kind, selId);
+    drag = { type: 'move', obj, kind: item.dataset.kind, orig: { ...obj }, start: pt, pid: e.pointerId, moved: false, el: item };
+    item.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    return;
+  }
+  // 未選択のものや何もない所はタップ扱い(スクロールの邪魔をしない)
+  drag = { type: 'tap', id: item ? item.dataset.id : null, start: pt, sx: e.clientX, sy: e.clientY, pid: e.pointerId };
+});
+
+$('map').addEventListener('pointermove', e => {
+  if (!drag || drag.pid !== e.pointerId || drag.type === 'tap') return;
+  const f = curField();
+  const pt = mapPoint(e);
+  const dx = pt.x - drag.start.x, dy = pt.y - drag.start.y;
+  if (!drag.moved && Math.hypot(dx, dy) * scale < 4) return;
+  drag.moved = true;
+  const o = drag.orig, obj = drag.obj;
+  const lines = snapLines(obj.id);
+  if (drag.type === 'move') {
+    let x = round1(o.x + dx), y = round1(o.y + dy);
+    const sl = snapVal(x, lines.xs), sr = snapVal(x + o.w, lines.xs);
+    if (sl !== null) x = sl; else if (sr !== null) x = sr - o.w;
+    const st = snapVal(y, lines.ys), sb = snapVal(y + o.h, lines.ys);
+    if (st !== null) y = st; else if (sb !== null) y = sb - o.h;
+    obj.x = Math.min(Math.max(0, x), f.w - o.w);
+    obj.y = Math.min(Math.max(0, y), f.h - o.h);
+  } else {
+    let x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+    const snapOr = (v, ls) => { const s = snapVal(v, ls); return s !== null ? s : round1(v); };
+    if (drag.corner.includes('w')) x1 = snapOr(o.x + dx, lines.xs); else x2 = snapOr(o.x + o.w + dx, lines.xs);
+    if (drag.corner.includes('n')) y1 = snapOr(o.y + dy, lines.ys); else y2 = snapOr(o.y + o.h + dy, lines.ys);
+    x1 = Math.max(0, x1); y1 = Math.max(0, y1); x2 = Math.min(f.w, x2); y2 = Math.min(f.h, y2);
+    const MIN = 0.2;
+    if (x2 - x1 < MIN) { if (drag.corner.includes('w')) x1 = x2 - MIN; else x2 = x1 + MIN; }
+    if (y2 - y1 < MIN) { if (drag.corner.includes('n')) y1 = y2 - MIN; else y2 = y1 + MIN; }
+    obj.x = round1(x1); obj.y = round1(y1); obj.w = round1(x2 - x1); obj.h = round1(y2 - y1);
+  }
+  const el = $('map').querySelector(`[data-id="${obj.id}"]`);
+  if (el) {
+    place(el, obj);
+    if (drag.kind === 'pl') el.classList.toggle('warn', hasWarning(obj));   // 連作の重なりをその場で表示
+  }
+  positionHandles(obj);
+  showSizeTip(obj);
+});
+
+function endDrag(e) {
+  if (!drag || drag.pid !== e.pointerId) return;
+  const d = drag;
+  drag = null;
+  hideSizeTip();
+  if (d.type === 'tap') {
+    if (e.type === 'pointercancel') return;
+    if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8) return;
+    const el = d.id ? $('map').querySelector(`[data-id="${d.id}"]`) : null;
+    const kindOk = el && ((mode === 'plant' && el.dataset.kind === 'pl') || (mode === 'bed' && el.dataset.kind === 'bed'));
+    selId = kindOk ? d.id : null;
+    renderMap();
+    return;
+  }
+  if (d.moved) { save(); renderMap(); }
+}
+$('map').addEventListener('pointerup', endDrag);
+$('map').addEventListener('pointercancel', endDrag);
+
+let tipEl = null;
+function showSizeTip(r) {
+  if (!tipEl) { tipEl = document.createElement('div'); tipEl.className = 'size-tip'; }
+  if (!tipEl.parentNode) $('map').appendChild(tipEl);
+  tipEl.textContent = `${fmtM(r.w)} × ${fmtM(r.h)}`;
+  tipEl.style.left = (r.x + r.w / 2) * scale + 'px';
+  tipEl.style.top = r.y * scale + 'px';
+}
+function hideSizeTip() { if (tipEl && tipEl.parentNode) tipEl.remove(); }
+
+$('modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  mode = b.dataset.mode;
+  selId = null;
+  for (const x of $('modeSeg').children) x.classList.toggle('sel', x === b);
+  renderMap();
+});
+$('zoomIn').onclick = () => { ui.zoom = Math.min(6, +(ui.zoom * 1.5).toFixed(2)); saveUi(); renderMap(); };
+$('zoomOut').onclick = () => { ui.zoom = Math.max(1, +(ui.zoom / 1.5).toFixed(2)); if (ui.zoom < 1.1) ui.zoom = 1; saveUi(); renderMap(); };
+window.addEventListener('resize', () => { if (ui.tab === 'map') renderMap(); });
+
+/* ---------- 区画 ---------- */
+function addBed() {
+  const f = curField();
+  const beds = fieldBeds();
+  const n = beds.length + 1;
+  // 既存の区画の右(はみ出すなら下)に並べる。無ければ左上に
+  let r = { w: Math.min(1, f.w), h: Math.min(Math.max(1, round1(f.h * 0.8)), f.h) };
+  const last = beds[beds.length - 1];
+  if (last) {
+    r.w = last.w; r.h = last.h;
+    r.x = round1(last.x + last.w + 0.5); r.y = last.y;
+    if (r.x + r.w > f.w) { r.x = 0.5 > f.w - r.w ? 0 : 0.5; r.y = round1(last.y + last.h + 0.5); }
+    if (r.y + r.h > f.h) { r.x = 0; r.y = 0; }
+  } else { r.x = f.w > 2 ? 0.5 : 0; r.y = round1((f.h - r.h) / 2); }
+  const b = Object.assign({ id: uid(), fieldId: f.id, name: `畝${n}` }, r);
+  data.beds.push(b);
+  selId = b.id;
+  save(); renderMap();
+}
+function copyBed(b) {
+  const f = curField();
+  const nb = Object.assign({}, b, { id: uid(), name: nextBedName(b.name) });
+  if (b.x + b.w * 2 + 0.5 <= f.w) nb.x = round1(b.x + b.w + 0.5);
+  else if (b.y + b.h * 2 + 0.5 <= f.h) { nb.y = round1(b.y + b.h + 0.5); }
+  else { toast('畑に空きがありません。畑の大きさを広げるか、区画を小さくしてください'); return; }
+  data.beds.push(nb);
+  selId = nb.id;
+  save(); renderMap();
+}
+function nextBedName(name) {
+  const m = name.match(/^(.*?)(\d+)$/);
+  return m ? m[1] + (+m[2] + 1) : name + '2';
+}
+function openBedSheet(b) {
+  openSheet('区画', `
+    <label class="f">名前</label><input type="text" id="bdName" value="${esc(b.name)}">
+    <div class="row">
+      <div><label class="f">横(m)</label><input type="number" id="bdW" step="0.1" min="0.2" value="${b.w}"></div>
+      <div><label class="f">縦(m)</label><input type="number" id="bdH" step="0.1" min="0.2" value="${b.h}"></div>
+    </div>`, () => {
+    const f = curField();
+    b.name = $('bdName').value.trim() || b.name;
+    b.w = Math.min(f.w - b.x, Math.max(0.2, round1(+$('bdW').value || b.w)));
+    b.h = Math.min(f.h - b.y, Math.max(0.2, round1(+$('bdH').value || b.h)));
+    save(); renderMap();
+    return true;
+  });
+}
+
+/* ---------- 作付け ---------- */
+function makePlanting(cr, year, rect) {
+  return {
+    id: uid(), fieldId: curField().id, cropId: cr.id,
+    // 作物リストを後で直しても、植えた作物の表示・判定が変わらないよう値を写しておく
+    name: cr.name, family: cr.family, rot: cr.rot, color: familyColor(cr.family),
+    start: ymd(junToDate(year, cr.s, false)),
+    harvest: ymd(junToDate(year, cr.h, false)),
+    end: ymd(junToDate(year, cr.e, true)),
+    x: rect.x, y: rect.y, w: rect.w, h: rect.h, memo: '',
+  };
+}
+// 空いていて連作にならない区画を探す。無ければ空いている区画、それも無ければ畑の中央
+function choosePlace(p) {
+  const f = curField();
+  const others = fieldPlantings();
+  const beds = fieldBeds().slice().sort((a, b) => a.y - b.y || a.x - b.x);
+  const fits = b => {
+    const t = Object.assign({}, p, { x: b.x, y: b.y, w: b.w, h: b.h });
+    const free = !others.some(q => timeOverlap(t, q) && areaOverlap(t, q) > 0.05);
+    const rotOk = !rotationZones(t).some(q => areaOverlap(t, q) > 0.05);
+    return { free, rotOk };
+  };
+  let best = beds.find(b => { const r = fits(b); return r.free && r.rotOk; });
+  let note = '';
+  if (!best) { best = beds.find(b => fits(b).free); if (best) note = '連作にならない空き区画がないため、空いている区画に置きました'; }
+  if (best) return { rect: { x: best.x, y: best.y, w: best.w, h: best.h }, bed: best, note };
+  const w = Math.min(1, f.w), h = Math.min(2, f.h);
+  return { rect: { x: round1((f.w - w) / 2), y: round1((f.h - h) / 2), w, h },
+    note: beds.length ? '空いている区画がないため、畑の中央に置きました' : '' };
+}
+function plantCrop(cr) {
+  const year = ui.year;
+  const p = makePlanting(cr, year, { x: 0, y: 0, w: 1, h: 1 });
+  const pl = choosePlace(p);
+  Object.assign(p, pl.rect);
+  data.plantings.push(p);
+  selId = p.id;
+  mode = 'plant';
+  // 植えた作物が見える月に切り替える
+  if (!inView(p)) ui.month = parseYmd(p.start).getFullYear() === ui.year ? parseYmd(p.start).getMonth() + 1 : 0;
+  save();
+  closeSheet();
+  renderAll();
+  toast(pl.note || (pl.bed ? `${pl.bed.name}に植えました` : 'ドラッグで植える場所に動かしてください'));
+}
+function fitToBed(p) {
+  const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+  const b = fieldBeds().find(b => cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h);
+  if (!b) { toast('作物の中心が区画の中にありません'); return; }
+  Object.assign(p, { x: b.x, y: b.y, w: b.w, h: b.h });
+  save(); renderMap();
+}
+
+function openCropPicker() {
+  if (!curField()) return;
+  let fam = '';
+  let q = '';
+  const families = [...new Set(allCrops().map(cr => cr.family))];
+  openSheet(`${ui.year}年に植える作物`, `
+    <input type="text" id="cpSearch" placeholder="作物名で探す" style="margin:10px 0 8px">
+    <div class="chips" id="cpFam"></div>
+    <div class="card" style="margin:0;padding:0" id="cpList"></div>`);
+  const famBox = $('cpFam');
+  const draw = () => {
+    famBox.innerHTML = '';
+    for (const f of [''].concat(families)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = f || 'すべて';
+      if (f === fam) b.className = 'sel';
+      b.onclick = () => { fam = f; draw(); };
+      famBox.appendChild(b);
+    }
+    const list = $('cpList');
+    list.innerHTML = '';
+    const crops = allCrops().filter(cr => (!fam || cr.family === fam) && (!q || cr.name.includes(q)));
+    for (const cr of crops) {
+      const row = document.createElement('div');
+      row.className = 'crop-row';
+      row.innerHTML = `<span class="dot" style="background:${familyColor(cr.family)}"></span>
+        <div class="info"><div class="nm">${esc(cr.name)} <span class="badge">${esc(cr.how)}</span></div>
+        <div class="sub">${cropPeriodText(cr)}<br>${esc(cr.family)}・${rotText(cr.rot)}</div></div>`;
+      row.onclick = () => plantCrop(cr);
+      list.appendChild(row);
+    }
+    if (!crops.length) list.innerHTML = '<div class="muted" style="padding:14px">見つかりません</div>';
+  };
+  $('cpSearch').oninput = e => { q = e.target.value.trim(); draw(); };
+  draw();
+}
+$('fab').onclick = openCropPicker;
+
+function openPlantingSheet(p) {
+  openSheet(p.name, `
+    <div class="muted" style="margin-top:8px">${esc(p.family)}・${rotText(p.rot)}</div>
+    <label class="f">${p.cropId && cropById(p.cropId) ? esc(cropById(p.cropId).how) + 'を' : ''}植える日(種まき・植え付け)</label>
+    <input type="date" id="psStart" value="${p.start}">
+    <label class="f">収穫を始める日</label>
+    <input type="date" id="psHarvest" value="${p.harvest}">
+    <label class="f">片付ける日(収穫の終わり)</label>
+    <input type="date" id="psEnd" value="${p.end}">
+    <div class="row">
+      <div><label class="f">横(m)</label><input type="number" id="psW" step="0.1" min="0.2" value="${p.w}"></div>
+      <div><label class="f">縦(m)</label><input type="number" id="psH" step="0.1" min="0.2" value="${p.h}"></div>
+    </div>
+    <label class="f">メモ(品種・株数など)</label>
+    <textarea id="psMemo">${esc(p.memo || '')}</textarea>`, () => {
+    const s = $('psStart').value, h = $('psHarvest').value, e = $('psEnd').value;
+    if (!s || !e) { toast('植える日と片付ける日を入れてください'); return false; }
+    if (e < s) { toast('片付ける日が植える日より前になっています'); return false; }
+    const f = curField();
+    p.start = s; p.end = e;
+    p.harvest = h && h >= s && h <= e ? h : s;
+    p.w = Math.min(f.w - p.x, Math.max(0.2, round1(+$('psW').value || p.w)));
+    p.h = Math.min(f.h - p.y, Math.max(0.2, round1(+$('psH').value || p.h)));
+    p.memo = $('psMemo').value.trim();
+    save(); renderAll();
+    return true;
+  });
+}
+
+/* ---------- カレンダー ---------- */
+function renderCalendar() {
+  const box = $('calBody');
+  const f = curField();
+  const ys = new Date(ui.year, 0, 1), ye = new Date(ui.year, 11, 31);
+  const yearDays = (ye - ys) / 864e5 + 1;
+  const list = fieldPlantings().filter(p => p.start <= ymd(ye) && p.end >= ymd(ys))
+    .sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name, 'ja'));
+  if (!f || !list.length) {
+    box.innerHTML = `<div class="card muted">${ui.year}年の作付けはまだありません。畑マップの「＋ 作物を植える」から追加してください。</div>`;
+    return;
+  }
+  const pos = s => {
+    const d = Math.min(Math.max((parseYmd(s) - ys) / 864e5, 0), yearDays);
+    return d / yearDays * 100;
+  };
+  const bedName = p => {
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+    const b = fieldBeds().find(b => cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h);
+    return b ? b.name : '';
+  };
+  let html = `<div class="cal"><div class="cal-head"><div style="padding:4px 6px">作物</div><div class="cal-months">${
+    Array.from({ length: 12 }, (_, i) => `<div>${i + 1}</div>`).join('')}</div></div>`;
+  const todayPos = today.getFullYear() === ui.year ? pos(ymd(today)) : null;
+  for (const p of list) {
+    const l = pos(p.start), r = pos(p.end < ymd(ye) ? ymd(new Date(parseYmd(p.end).getTime() + 864e5)) : `${ui.year + 1}-01-01`);
+    const hp = pos(p.harvest);
+    const gw = Math.max(0, hp - l), hw = Math.max(0, r - Math.max(hp, l));
+    const cut = (p.start < ymd(ys) ? ' cut-l' : '') + (p.end > ymd(ye) ? ' cut-r' : '');
+    const warn = hasWarning(p) ? ' ⚠' : '';
+    html += `<div class="cal-row" data-id="${p.id}">
+      <div class="cal-name"><b>${esc(p.name)}${warn}</b><small>${esc(bedName(p))}</small></div>
+      <div class="cal-track">
+        ${todayPos !== null ? `<div class="cal-today" style="left:${todayPos}%"></div>` : ''}
+        <div class="cal-bar${cut}" style="left:${l}%;width:${r - l}%">
+          <div class="g" style="width:${gw / (r - l) * 100}%;background:${p.color}"></div>
+          <div class="h" style="width:${hw / (r - l) * 100}%;background:${p.color}"></div>
+        </div>
+      </div></div>`;
+  }
+  html += '</div><div class="muted" style="padding:0 14px 20px">行をタップすると、日付やメモを直せます。</div>';
+  box.innerHTML = html;
+  for (const row of box.querySelectorAll('.cal-row')) {
+    row.onclick = () => openPlantingSheet(data.plantings.find(p => p.id === row.dataset.id));
+  }
+}
+
+/* ---------- 作物リスト ---------- */
+function renderCropList() {
+  const box = $('cropList');
+  box.innerHTML = '';
+  for (const cr of allCrops()) {
+    const row = document.createElement('div');
+    row.className = 'crop-row';
+    const edited = cr.builtin && data.cropEdits[cr.id];
+    row.innerHTML = `<span class="dot" style="background:${familyColor(cr.family)}"></span>
+      <div class="info"><div class="nm">${esc(cr.name)} <span class="badge">${esc(cr.how)}</span>
+      ${edited ? '<span class="badge ok">変更あり</span>' : ''}${cr.builtin ? '' : '<span class="badge ok">追加した作物</span>'}</div>
+      <div class="sub">${cropPeriodText(cr)}<br>${esc(cr.family)}・${rotText(cr.rot)}</div></div>`;
+    row.onclick = () => openCropSheet(cr);
+    box.appendChild(row);
+  }
+}
+
+function junSelect(id, val, allowNext) {
+  const max = allowNext ? 24 : 12;
+  let opts = '';
+  for (let m = 1; m <= max; m++) for (let j = 1; j <= 3; j++) {
+    const v = `${m}-${j}`;
+    opts += `<option value="${v}"${val[0] === m && val[1] === j ? ' selected' : ''}>${jun(m, j)}</option>`;
+  }
+  return `<select class="f" id="${id}">${opts}</select>`;
+}
+function readJun(id) { return $(id).value.split('-').map(Number); }
+
+function openCropSheet(cr) {
+  const isNew = !cr;
+  cr = cr || { id: 'c-' + uid(), name: '', family: 'その他', how: '種', rot: 1, s: [4, 1], h: [6, 1], e: [7, 3], builtin: false };
+  const famOpts = Object.keys(FAMILY_COLORS).map(f => `<option${f === cr.family ? ' selected' : ''}>${esc(f)}</option>`).join('');
+  const howOpts = ['種', '苗', '種いも', '球'].map(h => `<option${h === cr.how ? ' selected' : ''}>${h}</option>`).join('');
+  const extra = cr.builtin
+    ? (data.cropEdits[cr.id] ? '<button type="button" class="danger" id="csReset" style="margin-top:14px">最初の設定に戻す</button>' : '')
+    : (isNew ? '' : '<button type="button" class="danger" id="csDel" style="margin-top:14px">この作物を削除</button>');
+  openSheet(isNew ? '作物を追加' : cr.name, `
+    <label class="f">名前</label><input type="text" id="csName" value="${esc(cr.name)}" ${cr.builtin ? 'readonly' : ''}>
+    <div class="row">
+      <div><label class="f">科(連作の判定に使います)</label><select class="f" id="csFam" ${cr.builtin ? 'disabled' : ''}>${famOpts}</select></div>
+      <div style="flex:0 0 96px"><label class="f">植え方</label><select class="f" id="csHow">${howOpts}</select></div>
+    </div>
+    <label class="f">植える時期(種まき・植え付け)</label>${junSelect('csS', cr.s, false)}
+    <label class="f">収穫を始める時期</label>${junSelect('csH', cr.h, true)}
+    <label class="f">片付ける時期(収穫の終わり)</label>${junSelect('csE', cr.e, true)}
+    <label class="f">同じ科を何年あけるか(0 = 連作OK)</label>
+    <input type="number" id="csRot" min="0" max="10" step="1" value="${cr.rot}">
+    ${extra}`, () => {
+    const s = readJun('csS'), h = readJun('csH'), e = readJun('csE');
+    const n = (a) => a[0] * 3 + a[1];
+    if (n(e) < n(s)) { toast('片付ける時期が植える時期より前です'); return false; }
+    const vals = { how: $('csHow').value, rot: Math.max(0, Math.min(10, Math.round(+$('csRot').value || 0))), s, h: n(h) < n(s) ? s : h, e };
+    if (cr.builtin) {
+      data.cropEdits[cr.id] = vals;
+    } else {
+      const name = $('csName').value.trim();
+      if (!name) { toast('名前を入れてください'); return false; }
+      const rec = Object.assign({ id: cr.id, name, family: $('csFam').value }, vals);
+      const i = data.customCrops.findIndex(x => x.id === cr.id);
+      if (i >= 0) data.customCrops[i] = rec; else data.customCrops.push(rec);
+    }
+    save(); renderCropList();
+    return true;
+  });
+  if ($('csReset')) $('csReset').onclick = () => { delete data.cropEdits[cr.id]; save(); closeSheet(); renderCropList(); };
+  if ($('csDel')) $('csDel').onclick = () => {
+    if (!confirm(`「${cr.name}」を作物リストから削除しますか？(植えた作物は消えません)`)) return;
+    data.customCrops = data.customCrops.filter(x => x.id !== cr.id); save(); closeSheet(); renderCropList();
+  };
+}
+$('addCropBtn').onclick = () => openCropSheet(null);
+
+/* ---------- 畑の管理 ---------- */
+function renderFieldSelect() {
+  const s = $('fieldSelect');
+  s.innerHTML = data.fields.map(f => `<option value="${f.id}"${f.id === (curField() || {}).id ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
+  s.hidden = data.fields.length < 2;
+}
+$('fieldSelect').onchange = e => { ui.fieldId = e.target.value; selId = null; saveUi(); renderAll(); };
+
+function renderFieldList() {
+  const box = $('fieldList');
+  box.innerHTML = '';
+  for (const f of data.fields) {
+    const row = document.createElement('div');
+    row.className = 'crop-row';
+    row.style.padding = '8px 0';
+    const n = data.plantings.filter(p => p.fieldId === f.id).length;
+    row.innerHTML = `<div class="info"><div class="nm">${esc(f.name)}</div><div class="sub">横 ${fmtM(f.w)} × 縦 ${fmtM(f.h)} / 作付け ${n}件</div></div><button type="button" class="small">編集</button>`;
+    row.onclick = () => openFieldSheet(f);
+    box.appendChild(row);
+  }
+}
+function openFieldSheet(f, first) {
+  const isNew = !f;
+  f = f || { id: uid(), name: `畑${data.fields.length + 1}`, w: 10, h: 6 };
+  openSheet(first ? 'はじめに：畑の大きさ' : (isNew ? '畑を追加' : '畑'), `
+    ${first ? '<div class="muted" style="margin-top:8px">畑の大きさをメートルで入れてください。だいたいで大丈夫です(あとで直せます)。</div>' : ''}
+    <label class="f">畑の名前</label><input type="text" id="fdName" value="${esc(f.name)}">
+    <div class="row">
+      <div><label class="f">横(m)</label><input type="number" id="fdW" step="0.5" min="1" value="${f.w}"></div>
+      <div><label class="f">縦(m)</label><input type="number" id="fdH" step="0.5" min="1" value="${f.h}"></div>
+    </div>
+    ${!isNew && data.fields.length > 1 ? '<button type="button" class="danger" id="fdDel" style="margin-top:14px">この畑を削除</button>' : ''}`, () => {
+    const w = +$('fdW').value, h = +$('fdH').value;
+    if (!(w >= 1 && h >= 1)) { toast('横・縦は1m以上で入れてください'); return false; }
+    f.name = $('fdName').value.trim() || f.name;
+    f.w = round1(w); f.h = round1(h);
+    // 畑を小さくしたとき、はみ出した区画・作物を内側に収める
+    for (const r of data.beds.concat(data.plantings).filter(r => r.fieldId === f.id)) {
+      r.w = Math.min(r.w, f.w); r.h = Math.min(r.h, f.h);
+      r.x = Math.min(r.x, round1(f.w - r.w)); r.y = Math.min(r.y, round1(f.h - r.h));
+    }
+    if (isNew) { data.fields.push(f); ui.fieldId = f.id; saveUi(); }
+    save(); renderAll();
+    return true;
+  }, first);
+  if ($('fdDel')) $('fdDel').onclick = () => {
+    const n = data.plantings.filter(p => p.fieldId === f.id).length;
+    if (!confirm(`畑「${f.name}」を削除しますか？\nこの畑の区画と作付け(${n}件)も消えます。`)) return;
+    data.fields = data.fields.filter(x => x.id !== f.id);
+    data.beds = data.beds.filter(x => x.fieldId !== f.id);
+    data.plantings = data.plantings.filter(x => x.fieldId !== f.id);
+    ui.fieldId = data.fields[0].id; saveUi();
+    save(); closeSheet(); renderAll();
+  };
+}
+$('addFieldBtn').onclick = () => openFieldSheet(null);
+
+/* ---------- バックアップ ---------- */
+async function shareOrDownload(blob, filename) {
+  const file = new File([blob], filename, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+$('backupBtn').onclick = () => {
+  const d = new Date();
+  const payload = Object.assign({ _format: BACKUP_FORMAT, savedAt: d.toISOString() }, data);
+  // Androidの共有は .json を受け付けないことがあるため .txt にする
+  shareOrDownload(new Blob([JSON.stringify(payload)], { type: 'text/plain' }),
+    `畑の作付け_${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}.txt`);
+};
+$('restoreBtn').onclick = () => $('restoreInput').click();
+$('restoreInput').onchange = async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const d = JSON.parse(await file.text());
+    if (d._format !== BACKUP_FORMAT || !Array.isArray(d.fields)) throw new Error('format');
+    if (!confirm(`バックアップ(畑${d.fields.length}件・作付け${(d.plantings || []).length}件)を読み込みます。\n今のデータは置き換わります。よろしいですか？`)) return;
+    delete d._format; delete d.savedAt;
+    data = Object.assign(defaultData(), d);
+    ui.fieldId = data.fields[0] ? data.fields[0].id : null;
+    selId = null;
+    save(); saveUi(); renderAll();
+    toast('読み込みました');
+  } catch (err) {
+    toast('このファイルは読み込めませんでした');
+  }
+};
+
+/* ---------- シート ---------- */
+let sheetOnOk = null;
+function openSheet(title, bodyHtml, onOk, noCancel) {
+  closeSheet();
+  const bg = document.createElement('div');
+  bg.className = 'sheet-bg'; bg.id = 'sheetBg';
+  const sh = document.createElement('div');
+  sh.className = 'sheet'; sh.id = 'sheet';
+  sh.innerHTML = `<div class="sheet-head"><b>${esc(title)}</b>${noCancel ? '' : '<button type="button" class="small" id="sheetX">閉じる</button>'}</div>
+    <div class="sheet-body">${bodyHtml}</div>
+    ${onOk ? `<div class="sheet-foot">${noCancel ? '' : '<button type="button" id="sheetCancel">キャンセル</button>'}<button type="button" class="primary" id="sheetOk">決定</button></div>` : ''}`;
+  document.body.append(bg, sh);
+  sheetOnOk = onOk;
+  if (!noCancel) {
+    bg.onclick = closeSheet;
+    $('sheetX').onclick = closeSheet;
+    if ($('sheetCancel')) $('sheetCancel').onclick = closeSheet;
+  }
+  if (onOk) $('sheetOk').onclick = () => { if (sheetOnOk() !== false) closeSheet(); };
+}
+function closeSheet() {
+  const a = $('sheet'), b = $('sheetBg');
+  if (a) a.remove();
+  if (b) b.remove();
+  sheetOnOk = null;
+}
+
+/* ---------- タブ・全体描画 ---------- */
+document.querySelector('.tabbar').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  ui.tab = b.dataset.tab;
+  renderAll();
+  window.scrollTo(0, 0);
+});
+
+function renderAll() {
+  for (const b of document.querySelectorAll('.tabbar button')) b.classList.toggle('active', b.dataset.tab === ui.tab);
+  for (const s of document.querySelectorAll('.screen')) s.classList.toggle('active', s.id === 'scr-' + ui.tab);
+  $('periodBar').hidden = !(ui.tab === 'map' || ui.tab === 'cal');
+  renderFieldSelect();
+  renderPeriod();
+  if (ui.tab === 'map') renderMap();
+  else $('fab').hidden = true;
+  if (ui.tab === 'cal') renderCalendar();
+  if (ui.tab === 'crops') renderCropList();
+  if (ui.tab === 'settings') renderFieldList();
+}
+
+if (!curField()) {
+  renderAll();
+  openFieldSheet(null, true);
+} else {
+  ui.fieldId = curField().id;
+  renderAll();
+}
+</script>
+</body>
+</html>
