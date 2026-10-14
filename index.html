@@ -114,13 +114,21 @@
   .map.mode-plant .bed{pointer-events:none;}
   .map.mode-bed .pl{opacity:.25;pointer-events:none;}
   .map.mode-bed .bed{cursor:pointer;}
-  .map.mode-bed .bed.sel{outline:3px solid var(--accent);z-index:6;}
+  .map.mode-bed .bed.sel{outline:3px solid var(--accent);z-index:6;touch-action:none;}
   .pl{
     position:absolute;border-radius:4px;color:#fff;font-size:12px;font-weight:bold;
     border:1.5px solid rgba(0,0,0,.25);overflow:hidden;padding:2px 3px;line-height:1.25;
-    text-shadow:0 0 3px rgba(0,0,0,.55);cursor:pointer;z-index:3;
+    text-shadow:0 0 3px rgba(0,0,0,.55);cursor:pointer;z-index:3;white-space:nowrap;
   }
   .pl .dt{font-weight:normal;font-size:10px;opacity:.95;}
+  .pl.one .dt{display:inline;margin-left:4px;}
+  .pl-tag{
+    position:absolute;z-index:4;pointer-events:none;white-space:nowrap;
+    background:rgba(255,255,255,.92);color:#333;border-radius:4px;padding:1px 4px;
+    font-size:10px;line-height:1.35;box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .pl-tag b{font-size:11px;}
+  .map.mode-bed .pl-tag{display:none;}
   .pl.sel{outline:3px solid #222;outline-offset:1px;z-index:8;touch-action:none;}
   .pl.warn{border:2.5px dashed #fff;box-shadow:0 0 0 2px var(--danger);}
   .pl .wi{position:absolute;right:2px;top:1px;font-size:13px;}
@@ -670,6 +678,7 @@ function renderMap() {
     place(el, p);
     el.innerHTML = `${esc(p.name)}<div class="dt">${periodText(p)}</div>${warn ? '<span class="wi">⚠</span>' : ''}`;
     map.appendChild(el);
+    fitPlantingLabel(el, p, f, map);
   }
 
   const target = mode === 'plant' ? sel : fieldBeds().find(b => b.id === selId);
@@ -680,7 +689,28 @@ function renderMap() {
   $('mapHint').innerHTML = mode === 'bed'
     ? '区画をタップして選び、ドラッグで移動、四隅の丸で大きさを変えます。'
     : viewOnly ? '作物をタップすると、日付やメモ、連作の状態を見られます。'
-    : (fieldPlantings().length ? '作物をタップして選ぶと、ドラッグで移動・四隅の丸で大きさ変更ができます。' : '');
+    : (fieldPlantings().length ? '作物をタップして選ぶと、ドラッグで移動・四隅の丸で大きさ変更ができます。' : '')
+      + '畝(区画)を動かすときは、上の「区画を編集」に切り替えます。';
+}
+
+// 小さい作物は名前・期間が枠に収まらないので、1行にするか枠の外に札を出す
+function fitPlantingLabel(el, p, f, map) {
+  const fits = () => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1;
+  if (fits()) return;
+  el.classList.add('one');
+  if (fits()) return;
+  el.classList.remove('one');
+  el.innerHTML = el.classList.contains('warn') ? '<span class="wi">⚠</span>' : '';
+  const tag = document.createElement('div');
+  tag.className = 'pl-tag';
+  tag.innerHTML = `<b>${esc(p.name)}</b> ${periodText(p)}`;
+  map.appendChild(tag);
+  // 枠の下に出す(畑の下端に近ければ上)。左右は畑からはみ出さないように寄せる
+  const below = (p.y + p.h) * scale + 2;
+  const top = below + tag.offsetHeight <= f.h * scale ? below : p.y * scale - tag.offsetHeight - 2;
+  const left = Math.min(p.x * scale, f.w * scale - tag.offsetWidth);
+  tag.style.top = Math.max(0, top) + 'px';
+  tag.style.left = Math.max(0, left) + 'px';
 }
 
 function place(el, r) {
